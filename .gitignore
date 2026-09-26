@@ -1,35 +1,11 @@
-# OS
-.DS_Store
-Thumbs.db
-
-# Editors / IDEs
-.vscode/
-.idea/
-*.swp
-
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-*.egg-info/
-
-# Node
-node_modules/
-dist/
-
-# Env / secrets
-.env
-.env.*
-
-# LaTeX aux artifacts
-*.aux
-*.log
-*.out
-*.toc
-*.bbl
-*.blg
-
-# Build artifacts
+*.iml
+.kotlin
 build/
-target/
+.DS_Store
+captures
+**/module.xcodeproj/*
+!**/module.xcodeproj/project.pbxproj
+!**/module.xcodeproj/xcshareddata/
+!**/module.xcodeproj/project.xcworkspace/
+**/xcshareddata/WorkspaceSettings.xcsettings
+xcuserdata
