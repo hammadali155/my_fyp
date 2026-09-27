@@ -1,32 +1,85 @@
-*.iml
-.kotlin
-build/
-.DS_Store
-captures
-**/module.xcodeproj/*
-!**/module.xcodeproj/project.pbxproj
-!**/module.xcodeproj/xcshareddata/
-!**/module.xcodeproj/project.xcworkspace/
-**/xcshareddata/WorkspaceSettings.xcsettings
-xcuserdata
-
-# Python & backend
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Python distribution / packaging
 .Python
-backend/.venv/
-.venv/
 env/
 venv/
-ENV/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Linting
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Databases & local persistent storage
 *.db
 *.sqlite
 *.sqlite3
 backend/jawhar.db
-.env
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
 
+# Environment variables & local secrets
+.env
+.env*.local
+!.env.example
+
+# Kotlin / Compose Multiplatform / Amper / Gradle
+.amper/
+.gradle/
+**/build/
+desktopApp/build/
+androidApp/build/
+iosApp/build/
+webApp/build/
+shared/build/
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
