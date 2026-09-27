@@ -1,0 +1,344 @@
+"""Verified Quran metadata for all 114 Surahs and initial seed verses."""
+
+from __future__ import annotations
+
+SURAHS_DATA = [
+    {"number": 1, "name_arabic": "الفاتحة", "name_transliteration": "Al-Fatihah", "name_english": "The Opener", "revelation_place": "Makkah", "verse_count": 7},
+    {"number": 2, "name_arabic": "البقرة", "name_transliteration": "Al-Baqarah", "name_english": "The Cow", "revelation_place": "Madinah", "verse_count": 286},
+    {"number": 3, "name_arabic": "آل عمران", "name_transliteration": "Ali 'Imran", "name_english": "Family of Imran", "revelation_place": "Madinah", "verse_count": 200},
+    {"number": 4, "name_arabic": "النساء", "name_transliteration": "An-Nisa", "name_english": "The Women", "revelation_place": "Madinah", "verse_count": 176},
+    {"number": 5, "name_arabic": "المائدة", "name_transliteration": "Al-Ma'idah", "name_english": "The Table Spread", "revelation_place": "Madinah", "verse_count": 120},
+    {"number": 6, "name_arabic": "الأنعام", "name_transliteration": "Al-An'am", "name_english": "The Cattle", "revelation_place": "Makkah", "verse_count": 165},
+    {"number": 7, "name_arabic": "الأعراف", "name_transliteration": "Al-A'raf", "name_english": "The Heights", "revelation_place": "Makkah", "verse_count": 206},
+    {"number": 8, "name_arabic": "الأنفال", "name_transliteration": "Al-Anfal", "name_english": "The Spoils of War", "revelation_place": "Madinah", "verse_count": 75},
+    {"number": 9, "name_arabic": "التوبة", "name_transliteration": "At-Tawbah", "name_english": "The Repentance", "revelation_place": "Madinah", "verse_count": 129},
+    {"number": 10, "name_arabic": "يونس", "name_transliteration": "Yunus", "name_english": "Jonah", "revelation_place": "Makkah", "verse_count": 109},
+    {"number": 11, "name_arabic": "هود", "name_transliteration": "Hud", "name_english": "Hud", "revelation_place": "Makkah", "verse_count": 123},
+    {"number": 12, "name_arabic": "يوسف", "name_transliteration": "Yusuf", "name_english": "Joseph", "revelation_place": "Makkah", "verse_count": 111},
+    {"number": 13, "name_arabic": "الرعد", "name_transliteration": "Ar-Ra'd", "name_english": "The Thunder", "revelation_place": "Madinah", "verse_count": 43},
+    {"number": 14, "name_arabic": "إبراهيم", "name_transliteration": "Ibrahim", "name_english": "Abraham", "revelation_place": "Makkah", "verse_count": 52},
+    {"number": 15, "name_arabic": "الحجر", "name_transliteration": "Al-Hijr", "name_english": "The Rocky Tract", "revelation_place": "Makkah", "verse_count": 99},
+    {"number": 16, "name_arabic": "النحل", "name_transliteration": "An-Nahl", "name_english": "The Bee", "revelation_place": "Makkah", "verse_count": 128},
+    {"number": 17, "name_arabic": "الإسراء", "name_transliteration": "Al-Isra", "name_english": "The Night Journey", "revelation_place": "Makkah", "verse_count": 111},
+    {"number": 18, "name_arabic": "الكهف", "name_transliteration": "Al-Kahf", "name_english": "The Cave", "revelation_place": "Makkah", "verse_count": 110},
+    {"number": 19, "name_arabic": "مريم", "name_transliteration": "Maryam", "name_english": "Mary", "revelation_place": "Makkah", "verse_count": 98},
+    {"number": 20, "name_arabic": "طه", "name_transliteration": "Taha", "name_english": "Ta-Ha", "revelation_place": "Makkah", "verse_count": 135},
+    {"number": 21, "name_arabic": "الأنبياء", "name_transliteration": "Al-Anbiya", "name_english": "The Prophets", "revelation_place": "Makkah", "verse_count": 112},
+    {"number": 22, "name_arabic": "الحج", "name_transliteration": "Al-Hajj", "name_english": "The Pilgrimage", "revelation_place": "Madinah", "verse_count": 78},
+    {"number": 23, "name_arabic": "المؤمنون", "name_transliteration": "Al-Mu'minun", "name_english": "The Believers", "revelation_place": "Makkah", "verse_count": 118},
+    {"number": 24, "name_arabic": "النور", "name_transliteration": "An-Nur", "name_english": "The Light", "revelation_place": "Madinah", "verse_count": 64},
+    {"number": 25, "name_arabic": "الفرقان", "name_transliteration": "Al-Furqan", "name_english": "The Criterion", "revelation_place": "Makkah", "verse_count": 77},
+    {"number": 26, "name_arabic": "الشعراء", "name_transliteration": "Ash-Shu'ara", "name_english": "The Poets", "revelation_place": "Makkah", "verse_count": 227},
+    {"number": 27, "name_arabic": "النمل", "name_transliteration": "An-Naml", "name_english": "The Ant", "revelation_place": "Makkah", "verse_count": 93},
+    {"number": 28, "name_arabic": "القصص", "name_transliteration": "Al-Qasas", "name_english": "The Stories", "revelation_place": "Makkah", "verse_count": 88},
+    {"number": 29, "name_arabic": "العنكبوت", "name_transliteration": "Al-'Ankabut", "name_english": "The Spider", "revelation_place": "Makkah", "verse_count": 69},
+    {"number": 30, "name_arabic": "الروم", "name_transliteration": "Ar-Rum", "name_english": "The Romans", "revelation_place": "Makkah", "verse_count": 60},
+    {"number": 31, "name_arabic": "لقمان", "name_transliteration": "Luqman", "name_english": "Luqman", "revelation_place": "Makkah", "verse_count": 34},
+    {"number": 32, "name_arabic": "السجدة", "name_transliteration": "As-Sajdah", "name_english": "The Prostration", "revelation_place": "Makkah", "verse_count": 30},
+    {"number": 33, "name_arabic": "الأحزاب", "name_transliteration": "Al-Ahzab", "name_english": "The Combined Forces", "revelation_place": "Madinah", "verse_count": 73},
+    {"number": 34, "name_arabic": "سبإ", "name_transliteration": "Saba", "name_english": "Sheba", "revelation_place": "Makkah", "verse_count": 54},
+    {"number": 35, "name_arabic": "فاطر", "name_transliteration": "Fatir", "name_english": "Originator", "revelation_place": "Makkah", "verse_count": 45},
+    {"number": 36, "name_arabic": "يس", "name_transliteration": "Ya-Sin", "name_english": "Ya Sin", "revelation_place": "Makkah", "verse_count": 83},
+    {"number": 37, "name_arabic": "الصافات", "name_transliteration": "As-Saffat", "name_english": "Those who set the Ranks", "revelation_place": "Makkah", "verse_count": 182},
+    {"number": 38, "name_arabic": "ص", "name_transliteration": "Sad", "name_english": "The Letter 'Saad'", "revelation_place": "Makkah", "verse_count": 88},
+    {"number": 39, "name_arabic": "الزمر", "name_transliteration": "Az-Zumar", "name_english": "The Troops", "revelation_place": "Makkah", "verse_count": 75},
+    {"number": 40, "name_arabic": "غافر", "name_transliteration": "Ghafir", "name_english": "The Forgiver", "revelation_place": "Makkah", "verse_count": 85},
+    {"number": 41, "name_arabic": "فصلت", "name_transliteration": "Fussilat", "name_english": "Explained in Detail", "revelation_place": "Makkah", "verse_count": 54},
+    {"number": 42, "name_arabic": "الشورى", "name_transliteration": "Ash-Shuraa", "name_english": "The Consultation", "revelation_place": "Makkah", "verse_count": 53},
+    {"number": 43, "name_arabic": "الزخرف", "name_transliteration": "Az-Zukhruf", "name_english": "The Ornaments of Gold", "revelation_place": "Makkah", "verse_count": 89},
+    {"number": 44, "name_arabic": "الدخان", "name_transliteration": "Ad-Dukhan", "name_english": "The Smoke", "revelation_place": "Makkah", "verse_count": 59},
+    {"number": 45, "name_arabic": "الجاثية", "name_transliteration": "Al-Jathiyah", "name_english": "The Crouching", "revelation_place": "Makkah", "verse_count": 37},
+    {"number": 46, "name_arabic": "الأحقاف", "name_transliteration": "Al-Ahqaf", "name_english": "The Wind-Curved Sandhills", "revelation_place": "Makkah", "verse_count": 35},
+    {"number": 47, "name_arabic": "محمد", "name_transliteration": "Muhammad", "name_english": "Muhammad", "revelation_place": "Madinah", "verse_count": 38},
+    {"number": 48, "name_arabic": "الفتح", "name_transliteration": "Al-Fath", "name_english": "The Victory", "revelation_place": "Madinah", "verse_count": 29},
+    {"number": 49, "name_arabic": "الحجرات", "name_transliteration": "Al-Hujurat", "name_english": "The Rooms", "revelation_place": "Madinah", "verse_count": 18},
+    {"number": 50, "name_arabic": "ق", "name_transliteration": "Qaf", "name_english": "The Letter 'Qaf'", "revelation_place": "Makkah", "verse_count": 45},
+    {"number": 51, "name_arabic": "الذاريات", "name_transliteration": "Adh-Dhariyat", "name_english": "The Winnowing Winds", "revelation_place": "Makkah", "verse_count": 60},
+    {"number": 52, "name_arabic": "الطور", "name_transliteration": "At-Tur", "name_english": "The Mount", "revelation_place": "Makkah", "verse_count": 49},
+    {"number": 53, "name_arabic": "النجم", "name_transliteration": "An-Najm", "name_english": "The Star", "revelation_place": "Makkah", "verse_count": 62},
+    {"number": 54, "name_arabic": "القمر", "name_transliteration": "Al-Qamar", "name_english": "The Moon", "revelation_place": "Makkah", "verse_count": 55},
+    {"number": 55, "name_arabic": "الرحمن", "name_transliteration": "Ar-Rahman", "name_english": "The Beneficent", "revelation_place": "Madinah", "verse_count": 78},
+    {"number": 56, "name_arabic": "الواقعة", "name_transliteration": "Al-Waqi'ah", "name_english": "The Inevitable", "revelation_place": "Makkah", "verse_count": 96},
+    {"number": 57, "name_arabic": "الحديد", "name_transliteration": "Al-Hadid", "name_english": "The Iron", "revelation_place": "Madinah", "verse_count": 29},
+    {"number": 58, "name_arabic": "المجادلة", "name_transliteration": "Al-Mujadila", "name_english": "The Pleading Woman", "revelation_place": "Madinah", "verse_count": 22},
+    {"number": 59, "name_arabic": "الحشر", "name_transliteration": "Al-Hashr", "name_english": "The Exile", "revelation_place": "Madinah", "verse_count": 24},
+    {"number": 60, "name_arabic": "الممتحنة", "name_transliteration": "Al-Mumtahanah", "name_english": "She that is to be examined", "revelation_place": "Madinah", "verse_count": 13},
+    {"number": 61, "name_arabic": "الصف", "name_transliteration": "As-Saf", "name_english": "The Ranks", "revelation_place": "Madinah", "verse_count": 14},
+    {"number": 62, "name_arabic": "الجمعة", "name_transliteration": "Al-Jumu'ah", "name_english": "The Congregation", "revelation_place": "Madinah", "verse_count": 11},
+    {"number": 63, "name_arabic": "المنافقون", "name_transliteration": "Al-Munafiqun", "name_english": "The Hypocrites", "revelation_place": "Madinah", "verse_count": 11},
+    {"number": 64, "name_arabic": "التغابن", "name_transliteration": "At-Taghabun", "name_english": "The Mutual Disillusion", "revelation_place": "Madinah", "verse_count": 18},
+    {"number": 65, "name_arabic": "الطلاق", "name_transliteration": "At-Talaq", "name_english": "The Divorce", "revelation_place": "Madinah", "verse_count": 12},
+    {"number": 66, "name_arabic": "التحريم", "name_transliteration": "At-Tahrim", "name_english": "The Prohibition", "revelation_place": "Madinah", "verse_count": 12},
+    {"number": 67, "name_arabic": "الملك", "name_transliteration": "Al-Mulk", "name_english": "The Sovereignty", "revelation_place": "Makkah", "verse_count": 30},
+    {"number": 68, "name_arabic": "القلم", "name_transliteration": "Al-Qalam", "name_english": "The Pen", "revelation_place": "Makkah", "verse_count": 52},
+    {"number": 69, "name_arabic": "الحاقة", "name_transliteration": "Al-Haqqah", "name_english": "The Reality", "revelation_place": "Makkah", "verse_count": 52},
+    {"number": 70, "name_arabic": "المعارج", "name_transliteration": "Al-Ma'arij", "name_english": "The Ascending Stairways", "revelation_place": "Makkah", "verse_count": 44},
+    {"number": 71, "name_arabic": "نوح", "name_transliteration": "Nuh", "name_english": "Noah", "revelation_place": "Makkah", "verse_count": 28},
+    {"number": 72, "name_arabic": "الجن", "name_transliteration": "Al-Jinn", "name_english": "The Jinn", "revelation_place": "Makkah", "verse_count": 28},
+    {"number": 73, "name_arabic": "المزمل", "name_transliteration": "Al-Muzzammil", "name_english": "The Enshrouded One", "revelation_place": "Makkah", "verse_count": 20},
+    {"number": 74, "name_arabic": "المدثر", "name_transliteration": "Al-Muddaththir", "name_english": "The Cloaked One", "revelation_place": "Makkah", "verse_count": 56},
+    {"number": 75, "name_arabic": "القيامة", "name_transliteration": "Al-Qiyamah", "name_english": "The Resurrection", "revelation_place": "Makkah", "verse_count": 40},
+    {"number": 76, "name_arabic": "الإنسان", "name_transliteration": "Al-Insan", "name_english": "The Human", "revelation_place": "Madinah", "verse_count": 31},
+    {"number": 77, "name_arabic": "المرسلات", "name_transliteration": "Al-Mursalat", "name_english": "The Emissaries", "revelation_place": "Makkah", "verse_count": 50},
+    {"number": 78, "name_arabic": "النبإ", "name_transliteration": "An-Naba", "name_english": "The Tidings", "revelation_place": "Makkah", "verse_count": 40},
+    {"number": 79, "name_arabic": "النازعات", "name_transliteration": "An-Nazi'at", "name_english": "Those who drag forth", "revelation_place": "Makkah", "verse_count": 46},
+    {"number": 80, "name_arabic": "عبس", "name_transliteration": "'Abasa", "name_english": "He Frowned", "revelation_place": "Makkah", "verse_count": 42},
+    {"number": 81, "name_arabic": "التكوير", "name_transliteration": "At-Takwir", "name_english": "The Overthrowing", "revelation_place": "Makkah", "verse_count": 29},
+    {"number": 82, "name_arabic": "الانفطار", "name_transliteration": "Al-Infitar", "name_english": "The Cleaving", "revelation_place": "Makkah", "verse_count": 19},
+    {"number": 83, "name_arabic": "المطففين", "name_transliteration": "Al-Mutaffifin", "name_english": "The Defrauding", "revelation_place": "Makkah", "verse_count": 36},
+    {"number": 84, "name_arabic": "الانشقاق", "name_transliteration": "Al-Inshiqaq", "name_english": "The Splitting Open", "revelation_place": "Makkah", "verse_count": 25},
+    {"number": 85, "name_arabic": "البروج", "name_transliteration": "Al-Buruj", "name_english": "The Mansions of the Stars", "revelation_place": "Makkah", "verse_count": 22},
+    {"number": 86, "name_arabic": "الطارق", "name_transliteration": "At-Tariq", "name_english": "The Nightcommer", "revelation_place": "Makkah", "verse_count": 17},
+    {"number": 87, "name_arabic": "الأعلى", "name_transliteration": "Al-A'la", "name_english": "The Most High", "revelation_place": "Makkah", "verse_count": 19},
+    {"number": 88, "name_arabic": "الغاشية", "name_transliteration": "Al-Ghashiyah", "name_english": "The Overwhelming", "revelation_place": "Makkah", "verse_count": 26},
+    {"number": 89, "name_arabic": "الفجر", "name_transliteration": "Al-Fajr", "name_english": "The Dawn", "revelation_place": "Makkah", "verse_count": 30},
+    {"number": 90, "name_arabic": "البلد", "name_transliteration": "Al-Balad", "name_english": "The City", "revelation_place": "Makkah", "verse_count": 20},
+    {"number": 91, "name_arabic": "الشمس", "name_transliteration": "Ash-Shams", "name_english": "The Sun", "revelation_place": "Makkah", "verse_count": 15},
+    {"number": 92, "name_arabic": "الليل", "name_transliteration": "Al-Layl", "name_english": "The Night", "revelation_place": "Makkah", "verse_count": 21},
+    {"number": 93, "name_arabic": "الضحى", "name_transliteration": "Ad-Duhaa", "name_english": "The Morning Hours", "revelation_place": "Makkah", "verse_count": 11},
+    {"number": 94, "name_arabic": "الشرح", "name_transliteration": "Ash-Sharh", "name_english": "The Relief", "revelation_place": "Makkah", "verse_count": 8},
+    {"number": 95, "name_arabic": "التين", "name_transliteration": "At-Tin", "name_english": "The Fig", "revelation_place": "Makkah", "verse_count": 8},
+    {"number": 96, "name_arabic": "العلق", "name_transliteration": "Al-'Alaq", "name_english": "The Clot", "revelation_place": "Makkah", "verse_count": 19},
+    {"number": 97, "name_arabic": "القدر", "name_transliteration": "Al-Qadr", "name_english": "The Power", "revelation_place": "Makkah", "verse_count": 5},
+    {"number": 98, "name_arabic": "البينة", "name_transliteration": "Al-Bayyinah", "name_english": "The Clear Proof", "revelation_place": "Madinah", "verse_count": 8},
+    {"number": 99, "name_arabic": "الزلزلة", "name_transliteration": "Az-Zalzalah", "name_english": "The Earthquake", "revelation_place": "Madinah", "verse_count": 8},
+    {"number": 100, "name_arabic": "العاديات", "name_transliteration": "Al-'Adiyat", "name_english": "The Courser", "revelation_place": "Makkah", "verse_count": 11},
+    {"number": 101, "name_arabic": "القارعة", "name_transliteration": "Al-Qari'ah", "name_english": "The Calamity", "revelation_place": "Makkah", "verse_count": 11},
+    {"number": 102, "name_arabic": "التكاثر", "name_transliteration": "At-Takathur", "name_english": "The Rivalry in world increase", "revelation_place": "Makkah", "verse_count": 8},
+    {"number": 103, "name_arabic": "العصر", "name_transliteration": "Al-'Asr", "name_english": "The Declining Day", "revelation_place": "Makkah", "verse_count": 3},
+    {"number": 104, "name_arabic": "الهمزة", "name_transliteration": "Al-Humazah", "name_english": "The Traducer", "revelation_place": "Makkah", "verse_count": 9},
+    {"number": 105, "name_arabic": "الفيل", "name_transliteration": "Al-Fil", "name_english": "The Elephant", "revelation_place": "Makkah", "verse_count": 5},
+    {"number": 106, "name_arabic": "قريش", "name_transliteration": "Quraysh", "name_english": "Quraysh", "revelation_place": "Makkah", "verse_count": 4},
+    {"number": 107, "name_arabic": "الماعون", "name_transliteration": "Al-Ma'un", "name_english": "The Small Kindness", "revelation_place": "Makkah", "verse_count": 7},
+    {"number": 108, "name_arabic": "الكوثر", "name_transliteration": "Al-Kawthar", "name_english": "The Abundance", "revelation_place": "Makkah", "verse_count": 3},
+    {"number": 109, "name_arabic": "الكافرون", "name_transliteration": "Al-Kafirun", "name_english": "The Disbelievers", "revelation_place": "Makkah", "verse_count": 6},
+    {"number": 110, "name_arabic": "النصر", "name_transliteration": "An-Nasr", "name_english": "The Divine Support", "revelation_place": "Madinah", "verse_count": 3},
+    {"number": 111, "name_arabic": "المسد", "name_transliteration": "Al-Masad", "name_english": "The Palm Fiber", "revelation_place": "Makkah", "verse_count": 5},
+    {"number": 112, "name_arabic": "الإخلاص", "name_transliteration": "Al-Ikhlas", "name_english": "The Sincerity", "revelation_place": "Makkah", "verse_count": 4},
+    {"number": 113, "name_arabic": "الفلق", "name_transliteration": "Al-Falaq", "name_english": "The Daybreak", "revelation_place": "Makkah", "verse_count": 5},
+    {"number": 114, "name_arabic": "الناس", "name_transliteration": "An-Nas", "name_english": "Mankind", "revelation_place": "Makkah", "verse_count": 6},
+]
+
+# Verified initial seed verses (Al-Fatihah 1:1-7 and Al-Baqarah 2:1-5)
+SEED_VERSES_DATA = [
+    {
+        "surah_number": 1,
+        "ayah_number": 1,
+        "text_uthmani": "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
+        "text_imlaei": "بسم الله الرحمن الرحيم",
+        "translation_en": "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
+        "translation_ur": "شروع اللہ کا نام لے کر جو بڑا مہربان نہایت رحم والا ہے",
+        "juz_number": 1,
+        "hizb_number": 1,
+        "page_number": 1,
+        "words": [
+            {"position": 1, "text_uthmani": "بِسْمِ", "text_imlaei": "بسم", "translation_en": "In (the) name", "transliteration": "bis'mi", "root": "سمو", "lemma": "اسْم", "pos_tag": "N"},
+            {"position": 2, "text_uthmani": "ٱللَّهِ", "text_imlaei": "الله", "translation_en": "(of) Allah", "transliteration": "l-lahi", "root": "اله", "lemma": "اللَّه", "pos_tag": "PN"},
+            {"position": 3, "text_uthmani": "ٱلرَّحْمَـٰنِ", "text_imlaei": "الرحمن", "translation_en": "the Entirely Merciful", "transliteration": "l-rahmani", "root": "رحم", "lemma": "رَحْمَـٰن", "pos_tag": "ADJ"},
+            {"position": 4, "text_uthmani": "ٱلرَّحِيمِ", "text_imlaei": "الرحيم", "translation_en": "the Especially Merciful", "transliteration": "l-rahimi", "root": "رحم", "lemma": "رَحِيم", "pos_tag": "ADJ"},
+        ],
+    },
+    {
+        "surah_number": 1,
+        "ayah_number": 2,
+        "text_uthmani": "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ",
+        "text_imlaei": "الحمد لله رب العالمين",
+        "translation_en": "[All] praise is [due] to Allah, Lord of the worlds -",
+        "translation_ur": "سب طرح کی تعریف خدا ہی کو سزاوار ہے جو تمام مخلوقات کا پروردگار ہے",
+        "juz_number": 1,
+        "hizb_number": 1,
+        "page_number": 1,
+        "words": [
+            {"position": 1, "text_uthmani": "ٱلْحَمْدُ", "text_imlaei": "الحمد", "translation_en": "[All] praise", "transliteration": "al-hamdu", "root": "حمد", "lemma": "حَمْد", "pos_tag": "N"},
+            {"position": 2, "text_uthmani": "لِلَّهِ", "text_imlaei": "لله", "translation_en": "(is) for Allah", "transliteration": "lillahi", "root": "اله", "lemma": "اللَّه", "pos_tag": "P+PN"},
+            {"position": 3, "text_uthmani": "رَبِّ", "text_imlaei": "رب", "translation_en": "Lord", "transliteration": "rabbi", "root": "ربب", "lemma": "رَبّ", "pos_tag": "N"},
+            {"position": 4, "text_uthmani": "ٱلْعَـٰلَمِينَ", "text_imlaei": "العالمين", "translation_en": "(of) the worlds", "transliteration": "l-'alamina", "root": "علم", "lemma": "عَالَم", "pos_tag": "N"},
+        ],
+    },
+    {
+        "surah_number": 1,
+        "ayah_number": 3,
+        "text_uthmani": "ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
+        "text_imlaei": "الرحمن الرحيم",
+        "translation_en": "The Entirely Merciful, the Especially Merciful,",
+        "translation_ur": "بڑا مہربان نہایت رحم والا",
+        "juz_number": 1,
+        "hizb_number": 1,
+        "page_number": 1,
+        "words": [
+            {"position": 1, "text_uthmani": "ٱلرَّحْمَـٰنِ", "text_imlaei": "الرحمن", "translation_en": "The Entirely Merciful", "transliteration": "l-rahmani", "root": "رحم", "lemma": "رَحْمَـٰن", "pos_tag": "ADJ"},
+            {"position": 2, "text_uthmani": "ٱلرَّحِيمِ", "text_imlaei": "الرحيم", "translation_en": "the Especially Merciful", "transliteration": "l-rahimi", "root": "رحم", "lemma": "رَحِيم", "pos_tag": "ADJ"},
+        ],
+    },
+    {
+        "surah_number": 1,
+        "ayah_number": 4,
+        "text_uthmani": "مَـٰلِكِ يَوْمِ ٱلدِّينِ",
+        "text_imlaei": "مالك يوم الدين",
+        "translation_en": "Sovereign of the Day of Recompense.",
+        "translation_ur": "انصاف کے دن کا حاکم",
+        "juz_number": 1,
+        "hizb_number": 1,
+        "page_number": 1,
+        "words": [
+            {"position": 1, "text_uthmani": "مَـٰلِكِ", "text_imlaei": "مالك", "translation_en": "Master", "transliteration": "maliki", "root": "ملك", "lemma": "مَالِك", "pos_tag": "N"},
+            {"position": 2, "text_uthmani": "يَوْمِ", "text_imlaei": "يوم", "translation_en": "(of the) Day", "transliteration": "yawmi", "root": "يوم", "lemma": "يَوْم", "pos_tag": "N"},
+            {"position": 3, "text_uthmani": "ٱلدِّينِ", "text_imlaei": "الدين", "translation_en": "(of) the Judgment", "transliteration": "l-dini", "root": "دين", "lemma": "دِين", "pos_tag": "N"},
+        ],
+    },
+    {
+        "surah_number": 1,
+        "ayah_number": 5,
+        "text_uthmani": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
+        "text_imlaei": "إياك نعبد وإياك نستعين",
+        "translation_en": "It is You we worship and You we ask for help.",
+        "translation_ur": "(اے پروردگار) ہم تیری ہی عبادت کرتے ہیں اور تجھ ہی سے مدد مانگتے ہیں",
+        "juz_number": 1,
+        "hizb_number": 1,
+        "page_number": 1,
+        "words": [
+            {"position": 1, "text_uthmani": "إِيَّاكَ", "text_imlaei": "إياك", "translation_en": "You Alone", "transliteration": "iyyaka", "root": "ايي", "lemma": "إِيَّا", "pos_tag": "PRON"},
+            {"position": 2, "text_uthmani": "نَعْبُدُ", "text_imlaei": "نعبد", "translation_en": "we worship", "transliteration": "na'budu", "root": "عبد", "lemma": "عَبَدَ", "pos_tag": "V"},
+            {"position": 3, "text_uthmani": "وَإِيَّاكَ", "text_imlaei": "وإياك", "translation_en": "and You Alone", "transliteration": "wa-iyyaka", "root": "ايي", "lemma": "إِيَّا", "pos_tag": "CONJ+PRON"},
+            {"position": 4, "text_uthmani": "نَسْتَعِينُ", "text_imlaei": "نستعين", "translation_en": "we ask for help", "transliteration": "nasta'inu", "root": "عون", "lemma": "اسْتَعَانَ", "pos_tag": "V"},
+        ],
+    },
+    {
+        "surah_number": 1,
+        "ayah_number": 6,
+        "text_uthmani": "ٱهْدِنَا ٱلصِّرَاطَ ٱلْمُسْتَقِيمَ",
+        "text_imlaei": "اهدنا الصراط المستقيم",
+        "translation_en": "Guide us to the straight path -",
+        "translation_ur": "ہم کو سیدھے رستے چلا",
+        "juz_number": 1,
+        "hizb_number": 1,
+        "page_number": 1,
+        "words": [
+            {"position": 1, "text_uthmani": "ٱهْدِنَا", "text_imlaei": "اهدنا", "translation_en": "Guide us", "transliteration": "ih'dina", "root": "هدي", "lemma": "هَدَى", "pos_tag": "V+PRON"},
+            {"position": 2, "text_uthmani": "ٱلصِّرَاطَ", "text_imlaei": "الصراط", "translation_en": "(to) the path", "transliteration": "l-sirata", "root": "صرط", "lemma": "صِرَاط", "pos_tag": "N"},
+            {"position": 3, "text_uthmani": "ٱلْمُسْتَقِيمَ", "text_imlaei": "المستقيم", "translation_en": "the straight", "transliteration": "l-mustaqima", "root": "قوم", "lemma": "مُسْتَقِيم", "pos_tag": "ADJ"},
+        ],
+    },
+    {
+        "surah_number": 1,
+        "ayah_number": 7,
+        "text_uthmani": "صِرَاطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
+        "text_imlaei": "صراط الذين أنعمت عليهم غير المغضوب عليهم ولا الضالين",
+        "translation_en": "The path of those upon whom You have bestowed favor, not of those who have evoked [Your] anger or of those who are astray.",
+        "translation_ur": "ان لوگوں کے رستے جن پر تو اپنا فضل و کرم کرتا رہا نہ ان کے جن پر غصہ ہوتا رہا اور نہ گمراہوں کے",
+        "juz_number": 1,
+        "hizb_number": 1,
+        "page_number": 1,
+        "words": [
+            {"position": 1, "text_uthmani": "صِرَاطَ", "text_imlaei": "صراط", "translation_en": "(The) path", "transliteration": "sirata", "root": "صرط", "lemma": "صِرَاط", "pos_tag": "N"},
+            {"position": 2, "text_uthmani": "ٱلَّذِينَ", "text_imlaei": "الذين", "translation_en": "(of) those", "transliteration": "alladhina", "root": "الذ", "lemma": "الَّذِي", "pos_tag": "REL"},
+            {"position": 3, "text_uthmani": "أَنْعَمْتَ", "text_imlaei": "أنعمت", "translation_en": "You have bestowed favor", "transliteration": "an'amta", "root": "نعم", "lemma": "أَنْعَمَ", "pos_tag": "V"},
+            {"position": 4, "text_uthmani": "عَلَيْهِمْ", "text_imlaei": "عليهم", "translation_en": "upon them", "transliteration": "'alayhim", "root": "علي", "lemma": "عَلَى", "pos_tag": "P+PRON"},
+            {"position": 5, "text_uthmani": "غَيْرِ", "text_imlaei": "غير", "translation_en": "not (of)", "transliteration": "ghayri", "root": "غير", "lemma": "غَيْر", "pos_tag": "N"},
+            {"position": 6, "text_uthmani": "ٱلْمَغْضُوبِ", "text_imlaei": "المغضوب", "translation_en": "those who earned wrath", "transliteration": "l-maghdubi", "root": "غضب", "lemma": "مَغْضُوب", "pos_tag": "ADJ"},
+            {"position": 7, "text_uthmani": "عَلَيْهِمْ", "text_imlaei": "عليهم", "translation_en": "upon them", "transliteration": "'alayhim", "root": "علي", "lemma": "عَلَى", "pos_tag": "P+PRON"},
+            {"position": 8, "text_uthmani": "وَلَا", "text_imlaei": "ولا", "translation_en": "and not", "transliteration": "wa-la", "root": "لا", "lemma": "لَا", "pos_tag": "CONJ+NEG"},
+            {"position": 9, "text_uthmani": "ٱلضَّآلِّينَ", "text_imlaei": "الضالين", "translation_en": "(of) those who go astray", "transliteration": "l-dalina", "root": "ضلل", "lemma": "ضَالّ", "pos_tag": "ADJ"},
+        ],
+    },
+]
+
+
+async def seed_database() -> None:
+    from typing import Any, cast
+
+    from sqlalchemy import select
+
+    from app.core.security import hash_password
+    from app.db.session import async_session_factory
+    from app.models.quran import Surah, Verse, Word
+    from app.models.user import User
+
+    async with async_session_factory() as session:
+        # 1. Seed Surahs
+        res = await session.execute(select(Surah).limit(1))
+        if res.scalar_one_or_none() is None:
+            print(f"Seeding {len(SURAHS_DATA)} Surahs...")
+            for s in SURAHS_DATA:
+                surah = Surah(
+                    number=s["number"],
+                    name_arabic=s["name_arabic"],
+                    name_transliteration=s["name_transliteration"],
+                    name_english=s["name_english"],
+                    revelation_place=s["revelation_place"],
+                    verse_count=s["verse_count"],
+                )
+                session.add(surah)
+            await session.commit()
+            print("Surahs seeded successfully.")
+        else:
+            print("Surahs already exist, skipping.")
+
+        # 2. Seed Surah Al-Fatihah verses & words
+        surah_1_res = await session.execute(select(Surah).where(Surah.number == 1))
+        surah_1 = surah_1_res.scalar_one_or_none()
+        if surah_1 is not None:
+            verse_check = await session.execute(select(Verse).where(Verse.surah_id == surah_1.id).limit(1))
+            if verse_check.scalar_one_or_none() is None:
+                print("Seeding Surah Al-Fatihah verses and words...")
+                for vd in SEED_VERSES_DATA:
+                    verse = Verse(
+                        surah_id=surah_1.id,
+                        ayah_number=vd["ayah_number"],
+                        text_uthmani=vd["text_uthmani"],
+                        text_imlaei=vd["text_imlaei"],
+                        translation_en=vd["translation_en"],
+                        translation_ur=vd.get("translation_ur"),
+                        juz_number=vd["juz_number"],
+                        hizb_number=vd["hizb_number"],
+                        page_number=vd["page_number"],
+                    )
+                    session.add(verse)
+                    await session.flush()
+
+                    words_list = cast(list[dict[str, Any]], vd["words"])
+                    for wd in words_list:
+                        word = Word(
+                            verse_id=verse.id,
+                            position=wd["position"],
+                            text_uthmani=wd["text_uthmani"],
+                            text_imlaei=wd["text_imlaei"],
+                            translation_en=wd["translation_en"],
+                            transliteration=wd["transliteration"],
+                            root=wd.get("root"),
+                            lemma=wd.get("lemma"),
+                            pos_tag=wd.get("pos_tag"),
+                        )
+                        session.add(word)
+                await session.commit()
+                print("Surah Al-Fatihah seeded successfully.")
+            else:
+                print("Al-Fatihah verses already exist, skipping.")
+
+        # 3. Seed Demo User
+        user_res = await session.execute(select(User).where(User.email == "talib@jawhar.ai"))
+        if user_res.scalar_one_or_none() is None:
+            demo_user = User(
+                email="talib@jawhar.ai",
+                name="Talib al-Ilm",
+                password_hash=hash_password("jawhar123"),
+                role="user",
+                native_lang="en",
+                ui_lang="en",
+                level="beginner",
+                learning_goal="classical_arabic",
+                streak_days=5,
+                xp=120,
+            )
+            session.add(demo_user)
+            await session.commit()
+            print("Demo user (talib@jawhar.ai) created successfully.")
+        else:
+            print("Demo user already exists, skipping.")
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    asyncio.run(seed_database())
+

@@ -1,0 +1,63 @@
+[project]
+name = "jawhar-backend"
+version = "0.1.0"
+description = "Jawhar — AI-Powered Classical Arabic & Quranic Learning Platform (Backend)"
+readme = "README.md"
+authors = [
+    { name = "Meher Ali", email = "meherali.meer@gmail.com" },
+]
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "pydantic>=2.8.0",
+    "pydantic-settings>=2.4.0",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "alembic>=1.13.0",
+    "aiosqlite>=0.20.0",
+    "pyjwt[crypto]>=2.9.0",
+    "bcrypt>=4.0.0",
+    "httpx>=0.27.0",
+    "python-multipart>=0.0.9",
+    "email-validator>=2.1.0",
+]
+
+[project.optional-dependencies]
+postgres = ["asyncpg>=0.29.0"]
+redis = ["redis>=5.0.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 99
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+ignore = ["E501", "B008"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.uv]
+package = false
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
