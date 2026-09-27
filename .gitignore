@@ -9,3 +9,24 @@ captures
 !**/module.xcodeproj/project.xcworkspace/
 **/xcshareddata/WorkspaceSettings.xcsettings
 xcuserdata
+
+# Python & backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/.venv/
+.venv/
+env/
+venv/
+ENV/
+*.db
+*.sqlite
+*.sqlite3
+backend/jawhar.db
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+

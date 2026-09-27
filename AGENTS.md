@@ -35,10 +35,16 @@ fyp/
 ## Conventions
 
 When starting to write code, record the chosen stack and the commands **here**:
-- Build: _TBD_
-- Test: _TBD_
-- Lint: _TBD_
-- Typecheck: _TBD_
+- **Backend Stack**: Python 3.11 managed via `uv`, FastAPI, SQLAlchemy 2.0 (async), Pydantic v2, SQLite (dev) / PostgreSQL (prod).
+  - Sync: `cd backend && uv sync`
+  - Dev Server: `cd backend && uv run fastapi dev app/main.py`
+  - Test: `cd backend && uv run pytest`
+  - Lint: `cd backend && uv run ruff check`
+  - Typecheck: `cd backend && uv run mypy app`
+- **Frontend Stack**: Kotlin Compose Multiplatform (Desktop, Android, iOS, Web) via Amper (`./kotlin`).
+  - Build: `./kotlin build`
+  - Test: `./kotlin test`
+  - Run Desktop: `./kotlin run -m desktopApp`
 
 Until then:
 
