@@ -19,6 +19,14 @@ from app.schemas.quran import (
     VerseResponse,
     WordResponse,
 )
+from app.schemas.srs import (
+    SRSCardCreate,
+    SRSCardResponse,
+    SRSDueQueueResponse,
+    SRSReviewRequest,
+    SRSReviewResponse,
+    SRSStatsResponse,
+)
 
 __all__ = [
     "MessageResponse",
@@ -38,4 +46,10 @@ __all__ = [
     "VerseListResponse",
     "SearchMatchItem",
     "QuranSearchResponse",
+    "SRSCardCreate",
+    "SRSCardResponse",
+    "SRSDueQueueResponse",
+    "SRSReviewRequest",
+    "SRSReviewResponse",
+    "SRSStatsResponse",
 ]
