@@ -120,7 +120,11 @@ class SRSService:
 
         logger.debug(
             "Due queue for user_id=%d: total=%d new=%d learning=%d review=%d",
-            user_id, len(cards), new_count, learning_count, review_count,
+            user_id,
+            len(cards),
+            new_count,
+            learning_count,
+            review_count,
         )
         return SRSDueQueueResponse(
             cards=[SRSCardResponse.model_validate(c) for c in cards],
@@ -137,9 +141,7 @@ class SRSService:
         rating: int,
         review_duration_ms: int | None,
     ) -> SRSReviewResponse:
-        logger.info(
-            "Review submitted: user_id=%d card_id=%d rating=%d", user_id, card_id, rating
-        )
+        logger.info("Review submitted: user_id=%d card_id=%d rating=%d", user_id, card_id, rating)
         result = await self.db.execute(
             select(SRSCard).where(SRSCard.id == card_id, SRSCard.user_id == user_id)
         )
@@ -179,7 +181,11 @@ class SRSService:
 
         logger.info(
             "Card id=%d advanced: state=%s interval=%d ef=%.2f due=%s",
-            card.id, new_state, new_interval, new_ef, new_due.isoformat(),
+            card.id,
+            new_state,
+            new_interval,
+            new_ef,
+            new_due.isoformat(),
         )
         return SRSReviewResponse(
             card_id=card.id,
@@ -248,6 +254,7 @@ class SRSService:
         for d in review_dates:
             if isinstance(d, str):
                 from datetime import date
+
                 d = date.fromisoformat(d)
             if d == check_date:
                 streak += 1

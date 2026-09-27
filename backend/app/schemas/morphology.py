@@ -4,7 +4,9 @@ from pydantic import BaseModel, Field
 
 
 class MorphologyAnalyzeRequest(BaseModel):
-    word: str = Field(..., min_length=1, max_length=100, description="Arabic word token to analyze")
+    word: str = Field(
+        ..., min_length=1, max_length=100, description="Arabic word token to analyze"
+    )
 
 
 class CliticDetail(BaseModel):

@@ -17,7 +17,9 @@ class Surah(TimestampMixin, Base):
     revelation_place: Mapped[str | None] = mapped_column(String(10), nullable=True)
     verse_count: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    verses: Mapped[list[Verse]] = relationship(back_populates="surah", cascade="all, delete-orphan")
+    verses: Mapped[list[Verse]] = relationship(
+        back_populates="surah", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<Surah {self.number} {self.name_english!r}>"
@@ -25,9 +27,7 @@ class Surah(TimestampMixin, Base):
 
 class Verse(TimestampMixin, Base):
     __tablename__ = "verses"
-    __table_args__ = (
-        UniqueConstraint("surah_id", "ayah_number", name="uq_verse_surah_ayah"),
-    )
+    __table_args__ = (UniqueConstraint("surah_id", "ayah_number", name="uq_verse_surah_ayah"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     surah_id: Mapped[int] = mapped_column(ForeignKey("surahs.id"), nullable=False, index=True)
@@ -49,9 +49,7 @@ class Verse(TimestampMixin, Base):
 
 class Word(TimestampMixin, Base):
     __tablename__ = "words"
-    __table_args__ = (
-        UniqueConstraint("verse_id", "position", name="uq_word_verse_pos"),
-    )
+    __table_args__ = (UniqueConstraint("verse_id", "position", name="uq_word_verse_pos"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     verse_id: Mapped[int] = mapped_column(ForeignKey("verses.id"), nullable=False, index=True)

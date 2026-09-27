@@ -61,9 +61,7 @@ class SRSCard(TimestampMixin, Base):
 
 class SRSReviewLog(TimestampMixin, Base):
     __tablename__ = "srs_review_logs"
-    __table_args__ = (
-        Index("ix_srs_logs_user_reviewed", "user_id", "reviewed_at"),
-    )
+    __table_args__ = (Index("ix_srs_logs_user_reviewed", "user_id", "reviewed_at"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     card_id: Mapped[int] = mapped_column(
@@ -73,9 +71,7 @@ class SRSReviewLog(TimestampMixin, Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
-    rating: Mapped[int] = mapped_column(
-        Integer, nullable=False
-    )  # 1=Again, 2=Hard, 3=Good, 4=Easy
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)  # 1=Again, 2=Hard, 3=Good, 4=Easy
     review_duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     previous_interval_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

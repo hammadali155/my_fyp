@@ -6,7 +6,9 @@ from pydantic import BaseModel, Field
 
 
 class SRSCardCreate(BaseModel):
-    item_type: str = Field(default="root", description="root | vocabulary | verse_fill_blank | grammar_rule")
+    item_type: str = Field(
+        default="root", description="root | vocabulary | verse_fill_blank | grammar_rule"
+    )
     front: str = Field(..., min_length=1)
     back: str = Field(..., min_length=1)
     hint: str | None = None

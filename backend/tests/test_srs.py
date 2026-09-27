@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import pytest
 from httpx import AsyncClient
@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.srs import SRSCard
 from app.services.srs_service import _sm2_schedule
-
 
 # ---------------------------------------------------------------------------
 # Unit tests: SM-2 scheduling algorithm
@@ -160,9 +159,7 @@ async def test_submit_review_good(
     auth_headers: dict,
     srs_card_payload: dict,
 ):
-    card = await client.post(
-        "/api/v1/srs/cards", json=srs_card_payload, headers=auth_headers
-    )
+    card = await client.post("/api/v1/srs/cards", json=srs_card_payload, headers=auth_headers)
     card_id = card.json()["id"]
 
     resp = await client.post(
@@ -182,9 +179,7 @@ async def test_submit_review_again_lapses(
     auth_headers: dict,
     srs_card_payload: dict,
 ):
-    card = await client.post(
-        "/api/v1/srs/cards", json=srs_card_payload, headers=auth_headers
-    )
+    card = await client.post("/api/v1/srs/cards", json=srs_card_payload, headers=auth_headers)
     card_id = card.json()["id"]
 
     resp = await client.post(
@@ -221,9 +216,7 @@ async def test_get_stats_after_review(
     auth_headers: dict,
     srs_card_payload: dict,
 ):
-    card = await client.post(
-        "/api/v1/srs/cards", json=srs_card_payload, headers=auth_headers
-    )
+    card = await client.post("/api/v1/srs/cards", json=srs_card_payload, headers=auth_headers)
     card_id = card.json()["id"]
 
     await client.post(
@@ -245,9 +238,7 @@ async def test_delete_card(
     auth_headers: dict,
     srs_card_payload: dict,
 ):
-    card = await client.post(
-        "/api/v1/srs/cards", json=srs_card_payload, headers=auth_headers
-    )
+    card = await client.post("/api/v1/srs/cards", json=srs_card_payload, headers=auth_headers)
     card_id = card.json()["id"]
 
     del_resp = await client.delete(f"/api/v1/srs/cards/{card_id}", headers=auth_headers)

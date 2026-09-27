@@ -175,14 +175,14 @@ class MorphologyService:
         for prefix, meaning, p_type in sorted(PROCLITICS, key=lambda x: len(x[0]), reverse=True):
             if stem.startswith(prefix) and len(stem) > len(prefix) + 2:
                 detected_prefix = {"clitic": prefix, "meaning": meaning, "type": p_type}
-                stem = stem[len(prefix):]
+                stem = stem[len(prefix) :]
                 break
 
         # 2. Match longest suffix
         for suffix, meaning, s_type in sorted(ENCLITICS, key=lambda x: len(x[0]), reverse=True):
             if stem.endswith(suffix) and len(stem) > len(suffix) + 2:
                 detected_suffix = {"clitic": suffix, "meaning": meaning, "type": s_type}
-                stem = stem[:-len(suffix)]
+                stem = stem[: -len(suffix)]
                 break
 
         return {
@@ -295,16 +295,18 @@ class MorphologyService:
         cit_res = await self.db.execute(citations_stmt)
         citations = []
         for word_row, verse_row, surah_row in cit_res.all():
-            citations.append({
-                "surah_number": surah_row.number,
-                "surah_name": surah_row.name_transliteration,
-                "surah_name_arabic": surah_row.name_arabic,
-                "ayah_number": verse_row.ayah_number,
-                "word_position": word_row.position,
-                "word_text": word_row.text_uthmani,
-                "verse_text": verse_row.text_uthmani,
-                "verse_translation_en": verse_row.translation_en,
-            })
+            citations.append(
+                {
+                    "surah_number": surah_row.number,
+                    "surah_name": surah_row.name_transliteration,
+                    "surah_name_arabic": surah_row.name_arabic,
+                    "ayah_number": verse_row.ayah_number,
+                    "word_position": word_row.position,
+                    "word_text": word_row.text_uthmani,
+                    "verse_text": verse_row.text_uthmani,
+                    "verse_translation_en": verse_row.translation_en,
+                }
+            )
 
         return {
             "root": clean_root,

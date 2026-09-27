@@ -88,11 +88,7 @@ class QuranService:
 
     async def get_verse(self, verse_id: int) -> Verse:
         logger.debug("Fetching verse id=%d", verse_id)
-        stmt = (
-            select(Verse)
-            .options(selectinload(Verse.words))
-            .where(Verse.id == verse_id)
-        )
+        stmt = select(Verse).options(selectinload(Verse.words)).where(Verse.id == verse_id)
         result = await self.db.execute(stmt)
         verse = result.scalar_one_or_none()
         if verse is None:
