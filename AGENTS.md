@@ -36,6 +36,9 @@ Done and tested:
 - Decks: `decks` table + `srs_cards.deck_id`; GET/POST `/decks`, POST `/decks/{id}/words`, POST `/decks/{id}/words/bulk`, DELETE `/decks/{id}`; `scripts/seed_default_deck.py` seeds a per-user default deck from top-100 roots. Card text/gloss taken verbatim from the `words` table (words.translation_en backfilled from EQTB 2026-10-04).
 - User progress: review transactions update `users.xp` (rating-scaled), `streak_days` and `last_review_date` (UTC; single source of truth via `compute_streak_update`); badges + user_badges added, 5 seeded badges, `GET /api/v1/progress/badges`.
 - `/quran/roots`: roots ranked by occurrence count with min_count/pos_tag/surah_number filters and limit ≤ 500.
+- CAMeL Tools installed as optional `nlp` extra (`uv sync --extra nlp`); `analyze_word` prefers corpus data, else CAMeL, else rule-based; response carries `source` (corpus|camel|rules); CAMeL calls memoized with an in-process LRU. `scripts/camel_smoke.py` exercises the analyzer.
+- `POST /morphology/conjugate`: past/present/imperative for sound roots only; weak/hamzated/doubled roots return explicit `unsupported_reason`. Built from the existing VERB_FORMS_CATALOG (`fill_pattern` + `IMPERATIVE_PATTERNS`).
+- `GET /morphology/word-family/{root}`: distinct lemmas grouped by pos_tag with counts and one real example verse each; `GET /morphology/patterns`: verb forms catalog + static noun patterns (`app/db/noun_patterns.py`) with example words resolved from the `words` table (null when absent — never invented).
 
 Not done:
 - ~~Full Quran data~~ — done 2026-10-04 (77,429 words ingested; the reference figure 77,430 counts a placeholder row).
