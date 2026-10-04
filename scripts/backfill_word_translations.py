@@ -45,7 +45,8 @@ async def main_async(corpus_dir: Path, dry_run: bool) -> None:
         for (s, a, w), info in eqtb_words.items():
             translation = info["translation_en"] if isinstance(info["translation_en"], str) else None
             translit = info["transliteration"] if isinstance(info["transliteration"], str) else None
-            if translation is None and translit is None:
+            text_imlaei = info["text_imlaei"] if isinstance(info["text_imlaei"], str) else None
+            if translation is None and translit is None and text_imlaei is None:
                 continue
             vid = verse_lookup.get((s, a))
             if vid is None:
@@ -53,8 +54,8 @@ async def main_async(corpus_dir: Path, dry_run: bool) -> None:
             result = await session.execute(
                 update(Word)
                 .where(Word.verse_id == vid, Word.position == w)
-                .where((Word.translation_en.is_(None)) | (Word.transliteration.is_(None)))
-                .values(translation_en=translation, transliteration=translit)
+                .where((Word.translation_en.is_(None)) | (Word.transliteration.is_(None)) | (Word.text_imlaei.is_(None)))
+                .values(translation_en=translation, transliteration=translit, text_imlaei=text_imlaei)
             )
             updated += result.rowcount or 0
             if updated and updated % 10000 < 1:

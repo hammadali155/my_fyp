@@ -243,8 +243,10 @@ def parse_eqtb(path: Path) -> tuple[dict[tuple[int, int, int], dict[str, object]
         rows.sort(key=lambda r: int(r["tok_id"]))
         stem = next((r for r in rows if r["segment"] == "STEM"), rows[0])
         text = "".join(r["uthmani_token"] for r in rows if r["uthmani_token"] not in ("", "(*)"))
+        text_imlaei = "".join(r["imlaai_token"] for r in rows if r["imlaai_token"] not in ("", "(*)"))
         words[(s, a, w)] = {
             "text": text,
+            "text_imlaei": text_imlaei,
             "lemma": stem["lemma_ar"] or None,
             "root": stem["root_ar"] or None,
             "pos": stem["pos"] or None,
@@ -437,6 +439,7 @@ async def ingest(
         eq = eqtb_words.get((s_no, a_no, w_pos))
         if eq is not None:
             text = str(eq["text"])
+            text_imlaei = eq["text_imlaei"] if isinstance(eq["text_imlaei"], str) else None
             root = eq["root"] if isinstance(eq["root"], str) else None
             lemma = eq["lemma"] if isinstance(eq["lemma"], str) else None
             pos = eq["pos"] if isinstance(eq["pos"], str) else None
@@ -452,6 +455,7 @@ async def ingest(
         else:
             assert segments is not None
             text = "".join(seg["form"] for seg in segments)
+            text_imlaei = None
             translation_en = None
             transliteration = None
             root = _first_non_empty(segments, "root")
@@ -468,6 +472,7 @@ async def ingest(
             verse_id=verse_id,
             position=w_pos,
             text_uthmani=text,
+            text_imlaei=text_imlaei,
             root=root,
             lemma=lemma,
             pos_tag=pos,
