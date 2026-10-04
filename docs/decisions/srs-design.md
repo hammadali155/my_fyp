@@ -27,6 +27,10 @@ TRD §6 + BackendSchema §3.4/§6 originally specified: `decks` → `cards` → 
 - **Kotlin client effect:** Same as B optionally plus `FSRS-Kotlin` for offline.
 - **FR coverage:** Violates FR-SRS-01's letter (says SM-2); needs PRD amendment.
 
-## Decision
+## Addendum 2026-10-04
 
-**Option A**, FSRS deferred to post-v1. Rationale: defense needs a working, testable SRS; Option A keeps spec and code consistent at zero code cost; C's advantage is undemonstrable within the FYP window and can be revisited later by swapping the scheduler behind `SRSService` with one Alembic migration for stability/difficulty columns.
+A `decks` table and `srs_cards.deck_id` were added (via Alembic `b8cfafcfbe10`),
+marking a partial step toward Option B after all: decks group existing `srs_cards`,
+but the single-table SM-2 scheduler, ratings 1–4, and `graduated` state are unchanged.
+The `/srs/cards`, `/srs/due`, `/srs/review`, `/srs/stats` endpoints keep their
+existing shapes; new deck endpoints live under `/decks`.

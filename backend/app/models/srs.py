@@ -6,6 +6,7 @@ from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
+from app.models.deck import Deck
 
 
 class SRSCard(TimestampMixin, Base):
@@ -26,6 +27,9 @@ class SRSCard(TimestampMixin, Base):
     item_type: Mapped[str] = mapped_column(
         String(30), nullable=False, default="root"
     )  # root, vocabulary, verse_fill_blank, grammar_rule
+    deck_id: Mapped[int | None] = mapped_column(
+        ForeignKey("decks.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     front: Mapped[str] = mapped_column(Text, nullable=False)
     back: Mapped[str] = mapped_column(Text, nullable=False)
     hint: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -54,6 +58,7 @@ class SRSCard(TimestampMixin, Base):
     review_logs: Mapped[list[SRSReviewLog]] = relationship(
         back_populates="card", cascade="all, delete-orphan"
     )
+    deck: Mapped[Deck | None] = relationship(back_populates="cards")
 
     def __repr__(self) -> str:
         return f"<SRSCard id={self.id} user_id={self.user_id} state={self.state!r} due={self.due_date}>"
