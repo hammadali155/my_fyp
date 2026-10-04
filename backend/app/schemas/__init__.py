@@ -8,9 +8,16 @@ from app.schemas.auth import (
     UserResponse,
     UserUpdateRequest,
 )
+from app.schemas.bookmark import (
+    BookmarkCreate,
+    BookmarkListResponse,
+    BookmarkResponse,
+)
 from app.schemas.common import MessageResponse, PaginatedParams, PaginatedResponse
 from app.schemas.quran import (
     QuranSearchResponse,
+    RootRankItem,
+    RootRankResponse,
     SearchMatchItem,
     SurahDetailResponse,
     SurahListResponse,
@@ -46,10 +53,15 @@ __all__ = [
     "VerseListResponse",
     "SearchMatchItem",
     "QuranSearchResponse",
+    "RootRankItem",
+    "RootRankResponse",
     "SRSCardCreate",
     "SRSCardResponse",
     "SRSDueQueueResponse",
     "SRSReviewRequest",
     "SRSReviewResponse",
     "SRSStatsResponse",
+    "BookmarkCreate",
+    "BookmarkResponse",
+    "BookmarkListResponse",
 ]
