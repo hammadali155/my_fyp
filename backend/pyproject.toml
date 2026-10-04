@@ -46,6 +46,7 @@ ignore = ["E501", "B008"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["slow: slow tests that may hit the real database"]
 
 [tool.mypy]
 python_version = "3.11"
