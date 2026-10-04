@@ -26,9 +26,8 @@ Naming: `snake_case`. FKs: `{table}_id`.
 
 ```
 users 1───n refresh_tokens
-users 1───n decks
-decks 1───n cards  n───1 words
-users 1───n card_reviews  n───1 cards
+users 1───n srs_cards  n───1 words
+users 1───n srs_review_logs  n───1 srs_cards
 users 1───n chat_sessions  n───1 chat_messages
 users 1───n user_lessons  n───1 lessons
 lessons n───n lessons (prerequisites via lesson_prerequisites)
@@ -206,44 +205,48 @@ CREATE TABLE user_weak_areas (
 
 ### 3.4 SRS / Spaced Repetition
 
+> Per `docs/decisions/srs-design.md` (Option A): a single `srs_cards` table plus
+> `srs_review_logs`; ratings 1–4; state progression `new → learning → review → graduated`.
+> No `decks`/`cards`/`card_reviews` tables in v1. FSRS deferred.
+
 ```sql
-CREATE TABLE decks (
-    id         BIGSERIAL PRIMARY KEY,
-    user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name       TEXT NOT NULL,
-    is_custom  BOOLEAN NOT NULL DEFAULT false,   -- false = built-in Quranic deck
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX idx_decks_user ON decks(user_id);
-
-CREATE TABLE cards (
+CREATE TABLE srs_cards (
     id            BIGSERIAL PRIMARY KEY,
-    deck_id       BIGINT NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
-    word_id       BIGINT NOT NULL REFERENCES words(id) ON DELETE CASCADE,
-    status        TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','learning','review','mastered')),
+    user_id       BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    word_id       BIGINT REFERENCES words(id) ON DELETE SET NULL,
+    item_type     TEXT NOT NULL DEFAULT 'root',   -- root | vocabulary | verse_fill_blank | grammar_rule
+    front         TEXT NOT NULL,
+    back          TEXT NOT NULL,
+    hint          TEXT,
+    surah_number  INTEGER,
+    ayah_number   INTEGER,
+    state         TEXT NOT NULL DEFAULT 'new' CHECK (state IN ('new','learning','review','graduated')),
     repetitions   INTEGER NOT NULL DEFAULT 0,
-    ease_factor   NUMERIC(4,2) NOT NULL DEFAULT 2.50,   -- SM-2 EF, clamp [1.30, 3.00]
+    ease_factor   NUMERIC(4,2) NOT NULL DEFAULT 2.50,
     interval_days INTEGER NOT NULL DEFAULT 0,
-    due_date      DATE NOT NULL DEFAULT CURRENT_DATE,
+    lapses        INTEGER NOT NULL DEFAULT 0,
+    due_date      TIMESTAMPTZ NOT NULL DEFAULT now(),
     last_reviewed_at TIMESTAMPTZ,
-    UNIQUE (deck_id, word_id)
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_cards_due ON cards(due_date);
-CREATE INDEX idx_cards_user_deck ON cards(deck_id, status);
+CREATE INDEX idx_srs_cards_user_due ON srs_cards(user_id, due_date);
+CREATE INDEX idx_srs_cards_user_state ON srs_cards(user_id, state);
 
--- join helper: cards → user via users.decks
-CREATE INDEX idx_cards_deck ON cards(deck_id);
-CREATE INDEX idx_cards_word ON cards(word_id);
-
-CREATE TABLE card_reviews (
+CREATE TABLE srs_review_logs (
     id           BIGSERIAL PRIMARY KEY,
-    card_id      BIGINT NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
-    rating       INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),  -- SM-2 quality q
-    response_ms  INTEGER,                       -- time to answer
+    card_id      BIGINT NOT NULL REFERENCES srs_cards(id) ON DELETE CASCADE,
+    user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating       INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 4),
+    review_duration_ms INTEGER,
+    previous_interval_days INTEGER NOT NULL DEFAULT 0,
+    new_interval_days      INTEGER NOT NULL DEFAULT 0,
+    previous_ease_factor   NUMERIC(4,2) NOT NULL DEFAULT 2.50,
+    new_ease_factor        NUMERIC(4,2) NOT NULL DEFAULT 2.50,
     reviewed_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_reviews_card ON card_reviews(card_id);
-CREATE INDEX idx_reviews_time ON card_reviews(reviewed_at);
+CREATE INDEX idx_srs_logs_user_reviewed ON srs_review_logs(user_id, reviewed_at);
+CREATE INDEX idx_srs_logs_card ON srs_review_logs(card_id);
 ```
 
 ### 3.5 AI Tutor
@@ -300,9 +303,9 @@ CREATE TABLE user_badges (
 | words | root | root-occurrence search (Sarf) |
 | words | token | exact vocab lookups |
 | nahw_annotations | verse_id | verse annotation fetch |
-| cards | (deck_id, status) | SRS queue by status |
-| cards | due_date | "due today" scans |
-| card_reviews | reviewed_at | streak / retention stats |
+| srs_cards | (user_id, due_date) | SRS due queue |
+| srs_cards | (user_id, state) | state filters |
+| srs_review_logs | (user_id, reviewed_at) | streak / retention stats |
 | chat_messages | session_id | chat history fetch |
 | refresh_tokens | token_hash | refresh validation |
 | user_lessons | user_id | progress queries |
@@ -313,13 +316,12 @@ CREATE TABLE user_badges (
 
 ### Due review cards for a user
 ```sql
-SELECT c.*
-FROM cards c
-JOIN decks d ON d.id = c.deck_id
-WHERE d.user_id = $1
-  AND c.due_date <= CURRENT_DATE
-  AND c.status != 'mastered'
-ORDER BY c.due_date ASC, c.repetitions ASC
+SELECT *
+FROM srs_cards
+WHERE user_id = $1
+  AND due_date <= now()
+  AND state != 'graduated'
+ORDER BY due_date ASC, repetitions ASC
 LIMIT 100;
 ```
 
@@ -371,34 +373,48 @@ ORDER BY w.weight DESC;
 
 ## 6. SM-2 Scheduler Implementation Contract
 
-Server-side (authoritative). Client sends only `{ card_id, rating }`.
+Server-side (authoritative). Client sends only `{ card_id, rating }` with rating
+1=Again, 2=Hard, 3=Good, 4=Easy. Matches `app/services/srs_service.py`.
 
 ```python
-def sm2_update(card, q: int):
+def sm2_update(card, rating: int):
     ef = float(card.ease_factor)
-    if q < 3:
-        card.repetitions = 0
+    interval = card.interval_days
+    if rating == 1:  # Again — lapse
+        card.state = 'learning'
         interval = 1
-        ef = clamp(ef + 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02), 1.30, 3.00)
-    elif q == 3:
-        interval = max(int(card.interval_days * 1.2), 1)
-    elif q == 4:
-        if card.repetitions == 0: interval = 1
-        elif card.repetitions == 1: interval = 6
-        else: interval = int(card.interval_days * ef)
-        card.repetitions += 1
-    else:  # q == 5
-        if card.repetitions == 0: interval = 1
-        elif card.repetitions == 1: interval = 6
-        else: interval = int(card.interval_days * ef * 1.3)
-        card.repetitions += 1
-    card.ease_factor = ef
+        ef = max(ef - 0.20, 1.30)
+        card.lapses += 1
+    elif card.state in ('new', 'learning'):
+        if rating == 4:  # Easy — graduate immediately (4d, review)
+            interval = 4
+            card.state = 'review'
+        elif card.repetitions == 0:
+            interval = 1
+            card.state = 'learning'
+        else:
+            interval = 2
+            card.state = 'review'
+        ef = max(ef + (0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02)), 1.30)
+    else:  # review
+        if rating == 2:    # Hard
+            interval = max(1, round(interval * 1.20))
+            ef = max(ef - 0.15, 1.30)
+        elif rating == 3:  # Good
+            interval = max(1, round(interval * ef))
+        else:              # Easy
+            interval = max(1, round(interval * ef * 1.30))
+            ef = min(ef + 0.10, 3.00)
+    card.repetitions += 1  # every review counts
+    card.ease_factor = round(ef, 4)
     card.interval_days = interval
-    card.due_date = today + timedelta(days=interval)
-    card.status = 'review' if card.repetitions >= 3 else ('learning' if card.repetitions > 0 else 'new')
+    card.due_date = now + timedelta(days=interval)
 ```
 
-Status rule: `new` → learning at first success → `review` when repetitions ≥ 3 → `mastered` when interval > 21 days (configurable).
+Status rule: `new` → `learning` at first review → `review` on successful graduation
+→ `graduated` (terminal mastered state, equivalent of the old `mastered`).
+
+> FSRS is deferred; see `docs/decisions/srs-design.md`.
 
 ---
 
@@ -430,7 +446,7 @@ Status rule: `new` → learning at first success → `review` when repetitions �
 1. `cards.word_id` must reference an existing corpus word → ensures Quranic grounding.
 2. Nahw roles restricted to a canonical set + free-text fallback `dep_type` kept raw.
 3. `users.email` unique; soft-delete via `is_active`, never hard-delete historically.
-4. Rating values: `card_reviews.rating` ∈ 1..5 (1-2 fail, 3 hard, 4 good, 5 easy) — enforce CHECK.
+4. Rating values: `srs_review_logs.rating` ∈ 1..4 (1 Again, 2 Hard, 3 Good, 4 Easy) — enforce CHECK.
 5. `users.last_review_date` updated in the same transaction as the review to keep streak consistent.
 6. Prerequisite graph must be acyclic — enforced by test, not DB (self-ref FK can't cycle-guard).
 
