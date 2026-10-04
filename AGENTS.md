@@ -33,6 +33,8 @@ Done and tested:
 - SRS: create card, due queue, review (SM-2 variant, ratings 1-4), stats, delete.
 - `words` table extended with pattern/tense/voice/gender/number/person/features_json; `nahw_annotations` table populated from EQTB.
 - Bookmarks: `bookmarks` table (user_id, verse_id, note, collection, timestamps; unique per user+verse) with POST create-or-update, GET list (?collection=), DELETE /{bookmark_id} — user-scoped.
+- Decks: `decks` table + `srs_cards.deck_id`; GET/POST `/decks`, POST `/decks/{id}/words`, POST `/decks/{id}/words/bulk`, DELETE `/decks/{id}`; `scripts/seed_default_deck.py` seeds a per-user default deck from top-100 roots. Card text/gloss taken verbatim from the `words` table (words.translation_en backfilled from EQTB 2026-10-04).
+- User progress: review transactions update `users.xp` (rating-scaled), `streak_days` and `last_review_date` (UTC; single source of truth via `compute_streak_update`); badges + user_badges added, 5 seeded badges, `GET /api/v1/progress/badges`.
 - `/quran/roots`: roots ranked by occurrence count with min_count/pos_tag/surah_number filters and limit ≤ 500.
 
 Not done:

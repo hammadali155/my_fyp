@@ -254,6 +254,8 @@ def parse_eqtb(path: Path) -> tuple[dict[tuple[int, int, int], dict[str, object]
             "gender": stem["gender"] or None,
             "number": stem["number"] or None,
             "person": stem["person"] or None,
+            "translation_en": stem["trans"] if stem["trans"] != "_" else None,
+            "transliteration": stem["phonetic"] if stem["phonetic"] != "_" else None,
             "segments": [
                 {"segment": r["segment"], "form": r["uthmani_token"], "pos": r["pos"], "features": r["features"]}
                 for r in rows
@@ -444,10 +446,14 @@ async def ingest(
             gender = eq["gender"] if isinstance(eq["gender"], str) else None
             number = eq["number"] if isinstance(eq["number"], str) else None
             person = eq["person"] if isinstance(eq["person"], str) else None
+            translation_en = eq["translation_en"] if isinstance(eq["translation_en"], str) else None
+            transliteration = eq["transliteration"] if isinstance(eq["transliteration"], str) else None
             segs = segments if segments is not None else eq["segments"]  # type: ignore[assignment]
         else:
             assert segments is not None
             text = "".join(seg["form"] for seg in segments)
+            translation_en = None
+            transliteration = None
             root = _first_non_empty(segments, "root")
             lemma = _first_non_empty(segments, "lemma")
             pos = _first_non_empty(segments, "pos")
@@ -471,6 +477,8 @@ async def ingest(
             gender=gender,
             number=number,
             person=person,
+            translation_en=translation_en,
+            transliteration=transliteration,
             features_json={"segments": segs},
         )
         session.add(word)

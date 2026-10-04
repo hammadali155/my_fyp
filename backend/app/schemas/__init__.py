@@ -14,6 +14,16 @@ from app.schemas.bookmark import (
     BookmarkResponse,
 )
 from app.schemas.common import MessageResponse, PaginatedParams, PaginatedResponse
+from app.schemas.deck import (
+    AddWordRequest,
+    BulkAddWordsRequest,
+    DeckCreate,
+    DeckListResponse,
+    DeckResponse,
+    DeckStateCounts,
+    DeckWordAddResponse,
+)
+from app.schemas.progress import BadgeItem, BadgeListResponse
 from app.schemas.quran import (
     QuranSearchResponse,
     RootRankItem,
@@ -64,4 +74,13 @@ __all__ = [
     "BookmarkCreate",
     "BookmarkResponse",
     "BookmarkListResponse",
+    "DeckCreate",
+    "DeckResponse",
+    "DeckListResponse",
+    "DeckStateCounts",
+    "AddWordRequest",
+    "BulkAddWordsRequest",
+    "DeckWordAddResponse",
+    "BadgeItem",
+    "BadgeListResponse",
 ]

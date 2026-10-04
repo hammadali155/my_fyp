@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.models.srs import SRSCard, SRSReviewLog
+from app.models.user import User
 from app.schemas.srs import (
     SRSCardCreate,
     SRSCardResponse,
@@ -176,6 +177,11 @@ class SRSService:
             reviewed_at=now,
         )
         self.db.add(log)
+
+        from app.services.progress_service import ProgressService
+
+        await ProgressService(self.db).apply_review_progress(user_id, rating, now.date())
+
         await self.db.commit()
         await self.db.refresh(card)
 
@@ -223,7 +229,8 @@ class SRSService:
         )
         reviews_today = reviews_today_result.scalar_one() or 0
 
-        streak = await self._compute_streak(user_id, now)
+        user = (await self.db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+        streak = user.streak_days if user is not None else 0
 
         total = sum(state_counts.values())
         return SRSStatsResponse(
@@ -236,32 +243,6 @@ class SRSService:
             streak_days=streak,
             due_now=due_now,
         )
-
-    async def _compute_streak(self, user_id: int, now: datetime) -> int:
-        result = await self.db.execute(
-            select(func.date(SRSReviewLog.reviewed_at))
-            .where(SRSReviewLog.user_id == user_id)
-            .group_by(func.date(SRSReviewLog.reviewed_at))
-            .order_by(func.date(SRSReviewLog.reviewed_at).desc())
-        )
-        review_dates = [row[0] for row in result.all()]
-
-        if not review_dates:
-            return 0
-
-        streak = 0
-        check_date = now.date()
-        for d in review_dates:
-            if isinstance(d, str):
-                from datetime import date
-
-                d = date.fromisoformat(d)
-            if d == check_date:
-                streak += 1
-                check_date = check_date - timedelta(days=1)
-            elif d < check_date:
-                break
-        return streak
 
     async def delete_card(self, user_id: int, card_id: int) -> None:
         result = await self.db.execute(
