@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -15,6 +17,13 @@ class WordResponse(BaseModel):
     root: str | None = None
     lemma: str | None = None
     pos_tag: str | None = None
+    pattern: str | None = None
+    tense: str | None = None
+    voice: str | None = None
+    gender: str | None = None
+    number: str | None = None
+    person: str | None = None
+    features_json: dict[str, Any] | None = None
 
 
 class VerseResponse(BaseModel):
@@ -67,9 +76,20 @@ class SearchMatchItem(BaseModel):
     text_uthmani: str
     translation_en: str | None = None
     translation_ur: str | None = None
+    matched_field: str
 
 
 class QuranSearchResponse(BaseModel):
     query: str
     total: int
     items: list[SearchMatchItem]
+
+
+class RootRankItem(BaseModel):
+    root: str
+    occurrence_count: int
+
+
+class RootRankResponse(BaseModel):
+    items: list[RootRankItem]
+    total: int
