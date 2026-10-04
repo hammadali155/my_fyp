@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MessageResponse(BaseModel):
@@ -8,8 +8,8 @@ class MessageResponse(BaseModel):
 
 
 class PaginatedParams(BaseModel):
-    page: int = 1
-    page_size: int = 20
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=50)
 
     @property
     def offset(self) -> int:
