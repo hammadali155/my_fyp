@@ -3,6 +3,10 @@ product:
   platforms: [ jvm, android, iosArm64, iosSimulatorArm64, wasmJs ]
 
 dependencies:
+  - $libs.ktor.client.core
+  - $libs.ktor.client.content.negotiation
+  - $libs.ktor.serialization.json
+  - $libs.kotlinx.serialization.json
   - $compose.runtime
   - $compose.foundation
   - $compose.material3
@@ -15,11 +19,26 @@ dependencies:
 
 dependencies@android:
   - $compose.uiTooling
+  - $libs.ktor.client.okhttp
 
 settings:
+  kotlin:
+    serialization: json
   compose:
     enabled: true
     resources:
       packageName: com.meher.jawhar.resources
       # Generate public accessors so other modules (and previews) can use Res.*
       exposedAccessors: true
+
+dependencies@jvm:
+  - $libs.ktor.client.okhttp
+
+dependencies@iosArm64:
+  - $libs.ktor.client.darwin
+
+dependencies@iosSimulatorArm64:
+  - $libs.ktor.client.darwin
+
+dependencies@wasmJs:
+  - $libs.ktor.client.js
