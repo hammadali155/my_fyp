@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meher.jawhar.data.QuranSampleData
 import com.meher.jawhar.data.Surah
+import com.meher.jawhar.data.api.ApiClient
 import com.meher.jawhar.theme.AppleEmerald
 import com.meher.jawhar.theme.AppleGold
 
@@ -27,10 +28,31 @@ fun SurahListView(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilterIndex by remember { mutableStateOf(0) } // 0: All, 1: Makkah, 2: Madinah
+    var surahs by remember { mutableStateOf(QuranSampleData.sampleSurahs) }
 
-    val filteredSurahs = remember(searchQuery, selectedFilterIndex) {
+    LaunchedEffect(Unit) {
+        try {
+            val api = ApiClient()
+            surahs = api.getSurahs().map {
+                Surah(
+                    id = it.id,
+                    number = it.number,
+                    nameArabic = it.name_arabic,
+                    nameTransliteration = it.name_transliteration,
+                    nameEnglish = it.name_english,
+                    revelationPlace = it.revelation_place,
+                    verseCount = it.verse_count,
+                )
+            }
+            api.close()
+        } catch (_: Exception) {
+            // keep sample data on any failure
+        }
+    }
+
+    val filteredSurahs = remember(searchQuery, selectedFilterIndex, surahs) {
         val query = searchQuery.trim().lowercase()
-        QuranSampleData.sampleSurahs.filter { surah ->
+        surahs.filter { surah ->
             val matchesFilter = when (selectedFilterIndex) {
                 1 -> surah.revelationPlace.equals("Makkah", ignoreCase = true)
                 2 -> surah.revelationPlace.equals("Madinah", ignoreCase = true)

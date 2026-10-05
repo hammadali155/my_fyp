@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.meher.jawhar.data.QuranSampleData
 import com.meher.jawhar.data.Surah
 import com.meher.jawhar.data.Verse
+import com.meher.jawhar.data.api.ApiClient
 import com.meher.jawhar.data.Word
 import com.meher.jawhar.theme.AppleEmerald
 import com.meher.jawhar.theme.AppleGold
@@ -39,11 +40,46 @@ fun QuranReaderView(
     var translationMode by remember { mutableStateOf(0) } // 0: English, 1: Urdu, 2: Both
     var bookmarkedVerses by remember { mutableStateOf(setOf<Int>()) }
 
-    val verses = remember(surah.id) {
-        if (surah.number == 1) {
-            QuranSampleData.fatihahVerses
-        } else {
-            emptyList()
+    var verses by remember(surah.id) {
+        mutableStateOf(
+            if (surah.number == 1) QuranSampleData.fatihahVerses else emptyList<Verse>()
+        )
+    }
+
+    var loadError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(surah.id) {
+        try {
+            val api = ApiClient()
+            val dto = api.getVerses(surahId = surah.id)
+            verses = dto.items.map { v ->
+                Verse(
+                    id = v.id,
+                    surahId = v.surah_id,
+                    ayahNumber = v.ayah_number,
+                    textUthmani = v.text_uthmani,
+                    textImlaei = v.text_imlaei,
+                    translationEn = v.translation_en,
+                    translationUr = v.translation_ur,
+                    words = v.words.map { w ->
+                        Word(
+                            id = w.id,
+                            position = w.position,
+                            textUthmani = w.text_uthmani,
+                            textImlaei = w.text_imlaei,
+                            translationEn = w.translation_en,
+                            transliteration = w.transliteration,
+                            root = w.root,
+                            lemma = w.lemma,
+                            posTag = w.pos_tag,
+                        )
+                    },
+                )
+            }
+            api.close()
+            loadError = null
+        } catch (e: Exception) {
+            loadError = e.message
         }
     }
 
@@ -65,6 +101,12 @@ fun QuranReaderView(
                     arabicTitle = surah.nameArabic,
                     onBackClick = onBack,
                 )
+            }
+
+            if (loadError != null) {
+                item {
+                    Text("Could not load verses from server: ${loadError}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
+                }
             }
 
             // 2. Apple Segmented Control for Translation Mode
