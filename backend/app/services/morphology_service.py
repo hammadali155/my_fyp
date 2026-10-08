@@ -115,6 +115,64 @@ VERB_FORMS_CATALOG: list[dict[str, Any]] = [
     },
 ]
 
+IMPERATIVE_PATTERNS: dict[int, str] = {
+    1: "اِفْعَلْ",
+    2: "فَعِّلْ",
+    3: "فَاعِلْ",
+    4: "أَفْعِلْ",
+    5: "تَفَعَّلْ",
+    6: "تَفَاعَلْ",
+    7: "انْفَعِلْ",
+    8: "افْتَعِلْ",
+    9: "افْعَلَّ",
+    10: "اسْتَفْعِلْ",
+}
+
+WEAK_LETTERS = set("اويءأإؤئآى")
+HAMZA_LETTERS = set("ءأإؤئآ")
+
+
+def classify_root(root: str) -> str | None:
+    """Return an unsupported_reason string, or None if the root is sound."""
+    n_raw = strip_tashkeel(root)
+    if len(n_raw) != 3:
+        return "root must have exactly 3 letters"
+    if n_raw[1] == n_raw[2]:
+        return "doubled (geminate) roots are not supported"
+    if any(c in HAMZA_LETTERS for c in n_raw):
+        return "hamzated roots are not supported"
+    if any(c in WEAK_LETTERS for c in n_raw):
+        return "weak (assimilated/hollow/defective) roots are not supported"
+    return None
+
+
+def fill_pattern(template: str, root: str) -> str:
+    """Replace the ف/ع/ل slots of a catalog template with the root letters."""
+    n = normalize_arabic(root)
+    mapping = {"ف": n[0], "ع": n[1], "ل": n[2]}
+    return "".join(mapping.get(ch, ch) for ch in template)
+
+
+def conjugate_sound(root: str, form: int) -> dict[str, Any]:
+    form_info = next((f for f in VERB_FORMS_CATALOG if f["form"] == form), None)
+    if form_info is None:
+        return {"root": root, "form": form, "supported": False, "unsupported_reason": f"form must be 1..10, got {form}"}
+    reason = classify_root(root)
+    if reason is not None:
+        return {"root": root, "form": form, "supported": False, "unsupported_reason": reason}
+    return {
+        "root": root,
+        "form": form,
+        "supported": True,
+        "unsupported_reason": None,
+        "past": fill_pattern(form_info["pattern_past"], root),
+        "present": fill_pattern(form_info["pattern_present"], root),
+        "imperative": fill_pattern(IMPERATIVE_PATTERNS[form], root),
+        "verbal_noun_pattern": form_info["verbal_noun"],
+        "form_name": form_info["name"],
+    }
+
+
 PROCLITICS = [
     ("وال", "and the", "CONJ+DET"),
     ("فال", "so the", "CONJ+DET"),
@@ -219,6 +277,8 @@ class MorphologyService:
         root = None
         lemma = None
         pos_tag = None
+        pattern: str | None = None
+        features_json: dict[str, Any] | None = None
 
         if matched_words:
             # Pick first match with root populated
@@ -227,15 +287,56 @@ class MorphologyService:
                     root = mw.root
                     lemma = mw.lemma
                     pos_tag = mw.pos_tag
+                    pattern = mw.pattern
+                    features_json = mw.features_json
                     break
             if not root:
                 root = matched_words[0].root
                 lemma = matched_words[0].lemma
                 pos_tag = matched_words[0].pos_tag
+                pattern = matched_words[0].pattern
+                features_json = matched_words[0].features_json
 
         detected_form = None
         if root and len(root) == 3:
             detected_form = self._detect_verb_form(stem, root)
+
+        source = "rules"
+        if root is not None and len(matched_words) > 0:
+            source = "corpus"
+            return {
+                "word": word_raw,
+                "normalized": norm,
+                "segmentation": segmentation,
+                "root": root,
+                "lemma": lemma,
+                "pos_tag": pos_tag,
+                "detected_form": detected_form,
+                "is_quranic": True,
+                "source": source,
+                "pattern": pattern,
+                "features_json": features_json,
+            }
+
+        # Not in the corpus: try CAMeL, else rule-based fields below.
+        from app.services import camel_service
+
+        camel_raw = camel_service.analyze_with_camel(stem or norm)
+        if camel_raw is not None:
+            mapped = camel_service.map_camel_output(camel_raw, word_raw)
+            return {
+                "word": word_raw,
+                "normalized": norm,
+                "segmentation": segmentation,
+                "root": mapped["root"],
+                "lemma": mapped["lemma"],
+                "pos_tag": mapped["pos_tag"],
+                "detected_form": detected_form,
+                "is_quranic": False,
+                "source": "camel",
+                "pattern": mapped["pattern"],
+                "features_json": mapped["features_json"],
+            }
 
         return {
             "word": word_raw,
@@ -246,6 +347,9 @@ class MorphologyService:
             "pos_tag": pos_tag,
             "detected_form": detected_form,
             "is_quranic": len(matched_words) > 0,
+            "source": source,
+            "pattern": pattern,
+            "features_json": features_json,
         }
 
     def _detect_verb_form(self, stem: str, root: str) -> dict[str, Any] | None:
@@ -314,6 +418,88 @@ class MorphologyService:
             "distinct_lemmas": lemmas,
             "citations": citations,
         }
+
+    def conjugate_word(self, root: str, form: int) -> dict[str, Any]:
+        logger.info("Conjugating root=%s form=%d", root, form)
+        return conjugate_sound(root, form)
+
+    async def get_word_family(self, root: str) -> dict[str, Any]:
+        clean_root = normalize_arabic(root)
+        logger.debug("Fetching word family for root=%s", clean_root)
+        stmt = (
+            select(Word.pos_tag, Word.lemma, func.count(Word.id))
+            .where(Word.root == clean_root)
+            .group_by(Word.pos_tag, Word.lemma)
+            .order_by(Word.pos_tag.asc(), func.count(Word.id).desc())
+        )
+        rows = (await self.db.execute(stmt)).all()
+        groups: list[dict[str, Any]] = []
+        total = 0
+        for pos_tag, lemma, count in rows:
+            total += count
+            example_stmt = (
+                select(Word, Verse, Surah)
+                .join(Verse, Word.verse_id == Verse.id)
+                .join(Surah, Verse.surah_id == Surah.id)
+                .where(Word.root == clean_root, Word.pos_tag == pos_tag, Word.lemma == lemma)
+                .order_by(Word.id.asc())
+                .limit(1)
+            )
+            example_row = (await self.db.execute(example_stmt)).first()
+            example = None
+            if example_row is not None:
+                w, v, s = example_row
+                example = {
+                    "surah_number": s.number,
+                    "ayah_number": v.ayah_number,
+                    "word_position": w.position,
+                    "word_text": w.text_uthmani,
+                }
+            groups.append(
+                {"pos_tag": pos_tag, "lemma": lemma, "count": count, "example": example}
+            )
+        return {"root": clean_root, "total_occurrences": total, "groups": groups}
+
+    async def list_patterns(self, limit_verb_forms: bool = True) -> dict[str, Any]:
+        from app.db.noun_patterns import NOUN_PATTERNS
+
+        noun_rows = []
+        for entry in NOUN_PATTERNS:
+            example = None
+            stmt = (
+                select(Word, Verse, Surah)
+                .join(Verse, Word.verse_id == Verse.id)
+                .join(Surah, Verse.surah_id == Surah.id)
+                .where(Word.lemma == entry["example_lemma"])
+                .order_by(Word.id.asc())
+                .limit(1)
+            )
+            row = (await self.db.execute(stmt)).first()
+            if row is not None:
+                w, v, s = row
+                example = {
+                    "surah_number": s.number,
+                    "ayah_number": v.ayah_number,
+                    "word_position": w.position,
+                    "word_text": w.text_uthmani,
+                    "lemma": w.lemma,
+                }
+            noun_rows.append(
+                {"pattern": entry["pattern"], "name": entry["name"], "example": example}
+            )
+
+        verb_forms = [
+            {
+                "form_number": f["form"],
+                "name": f["name"],
+                "pattern_past": f["pattern_past"],
+                "pattern_present": f["pattern_present"],
+                "verbal_noun": f["verbal_noun"],
+                "description": f["description"],
+            }
+            for f in VERB_FORMS_CATALOG
+        ]
+        return {"verb_forms": verb_forms, "noun_patterns": noun_rows}
 
     def list_verb_forms(self) -> list[dict[str, Any]]:
         """Returns the educational reference catalog of all 10 Classical Arabic verb forms."""

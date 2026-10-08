@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meher.jawhar.theme.AppleEmerald
 import com.meher.jawhar.theme.AppleGold
+import com.meher.jawhar.data.api.ApiClient
+import com.meher.jawhar.data.api.AnalyzeResponseDto
 
 data class VerbFormDisplay(
     val formNumber: Int,
@@ -142,6 +144,9 @@ fun MorphologyLabView() {
                 }
             }
         } else {
+            item {
+                WordAnalyzerCard()
+            }
             // Clitic Anatomy Card
             item {
                 AppleInsetCard {
@@ -212,6 +217,63 @@ fun MorphologyLabView() {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun WordAnalyzerCard() {
+    var query by remember { mutableStateOf("كَتَبَ") }
+    var result by remember { mutableStateOf<AnalyzeResponseDto?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    var requested by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(requested) {
+        requested?.let { word ->
+            loading = true
+            error = null
+            try {
+                val api = ApiClient()
+                result = api.analyze(word)
+                api.close()
+            } catch (e: Exception) {
+                error = e.message
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    AppleInsetCard {
+        Text(
+            text = "LIVE WORD ANALYSIS (POST /morphology/analyze)",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = 1.sp,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text("Arabic word") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = { requested = query },
+            enabled = !loading,
+        ) { Text(if (loading) "Analyzing…" else "Analyze") }
+        if (error != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+        result?.let { r ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("root: ${r.root ?: "—"}", fontWeight = FontWeight.Bold)
+            Text("lemma: ${r.lemma ?: "—"}   pos: ${r.pos_tag ?: "—"}")
+            Text("pattern: ${r.pattern ?: "—"}   source: ${r.source ?: "—"}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

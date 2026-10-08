@@ -1,0 +1,4 @@
+surah	ayah	token_index	role	dep_type	head_index	irab
+1	1	1	جار ومجرور	PP	2	جر
+1	1	2	مفعول به	OBJ	0	نصب
+108	1	3	مفعول به	OBJ	2	نصب

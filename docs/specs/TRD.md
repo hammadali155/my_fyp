@@ -147,18 +147,23 @@ Base URL: `/api/v1`
 ### 4.2 Quran
 | Method | Route | Description |
 |--------|-------|-------------|
-| GET | `/quran/verses` | Paged verse list (surah, ayah filters) |
-| GET | `/quran/verses/{surah}:{ayah}` | Single verse with word-level data |
-| GET | `/quran/words/{word_id}` | Word with morphology (root, pattern, POS) |
 | GET | `/quran/surahs` | Surah list |
-| GET | `/quran/search?q=` | Verse text search |
+| GET | `/quran/surahs/{surah_id}` | Surah detail |
+| GET | `/quran/surahs/{surah_number}/verses/{ayah_number}` | Single verse by surah:ayah with words + morphology |
+| GET | `/quran/roots` | Roots ranked by occurrence count (min_count, pos_tag, surah_number filters; limit ≤ 500) |
+| GET | `/quran/verses` | Paged verse list (surah_id, juz_number, page_number filters) |
+| GET | `/quran/verses/{verse_id}` | Single verse with word-level data |
+| GET | `/quran/search?q=` | Search: Arabic queries matched against normalized `text_imlaei`, Latin queries against `translation_en`; items carry `matched_field`; pagination capped at 50/page |
 
 ### 4.3 Sarf Engine
 | Method | Route | Description |
 |--------|-------|-------------|
-| POST | `/sarf/analyze` | Body: `{"word": "..."}` → root, pattern, features |
-| POST | `/sarf/conjugate` | Body: `{"root": "...", "pattern": "..."}` → full paradigm |
-| GET | `/sarf/{root}/occurrences` | Quranic verses containing root |
+| POST | `/morphology/analyze` | Body: `{"word": "..."}` → root, pattern, features, segmentation |
+| GET | `/morphology/segment` | Clitic segmentation detail for a word |
+| GET | `/morphology/forms` | Verb form information (Forms I–X) |
+| GET | `/morphology/roots/{root}` | Quranic verses containing the root (concordance) |
+
+> Note: the implemented module is mounted at `/morphology` (not `/sarf`). `/sarf/conjugate` is not implemented; conjugation tables are deferred.
 
 ### 4.4 Nahw Parser
 | Method | Route | Description |
@@ -176,12 +181,15 @@ Base URL: `/api/v1`
 ### 4.6 SRS
 | Method | Route | Description |
 |--------|-------|-------------|
-| GET | `/srs/queue` | Today's review cards (due) |
-| POST | `/srs/review` | Submit rating per card (again/hard/good/easy) |
+| GET | `/srs/due` | Today's review cards (due) |
+| POST | `/srs/review` | Submit rating per card (1=Again, 2=Hard, 3=Good, 4=Easy) |
 | GET | `/srs/stats` | Streaks, counts, mastery summary |
-| POST | `/srs/cards` | Add word to custom deck |
-| DELETE | `/srs/cards/{id}` | Remove card |
-| GET | `/srs/decks` | List decks with counts |
+| POST | `/srs/cards` | Add word to review (custom item) |
+| DELETE | `/srs/cards/{card_id}` | Remove card |
+
+> Note: per decision `docs/decisions/srs-design.md` (Option A), SRS uses a single
+> `srs_cards` table + `srs_review_logs`, ratings 1–4 and state `graduated`;
+> there are no `decks` and no `/srs/decks` endpoint in v1. FSRS is deferred.
 
 ### 4.7 Learning Path
 | Method | Route | Description |
@@ -211,41 +219,46 @@ Full schema in **Backend Schema** document. Entities:
 - `lessons` — id, title, level, module, sequence, content_json
 - `lesson_prerequisites` — lesson_id, requires_lesson_id
 - `user_lessons` — user_id, lesson_id, status, completed_at, score
-- `decks` — id, user_id, name, is_custom
-- `cards` — id, deck_id, word_id, ease_factor, interval_days, repetitions, due_date, status
-- `card_reviews` — id, card_id, rating, reviewed_at, response_ms
+- `srs_cards` — id, user_id, word_id, item_type, front, back, hint, surah_number, ayah_number, state, ease_factor, interval_days, repetitions, lapses, due_date, last_reviewed_at
+- `srs_review_logs` — id, card_id, user_id, rating, review_duration_ms, previous/new interval, previous/new ease_factor, reviewed_at
 - `chat_sessions` — id, user_id, title, created_at
 - `chat_messages` — id, session_id, role (user/assistant), content, created_at
 - `assessment_attempts` — id, user_id, score, placed_level, completed_at
 
 ---
 
-## 6. SRS Algorithm — SM-2
+## 6. SRS Algorithm — SM-2 variant (as implemented)
+
+Ratings are 1–4 and scheduling is server-authoritative
+(`app/services/srs_service.py::_sm2_schedule`). Client sends only `{ card_id, rating }`.
 
 ### 6.1 Parameters
 | Field | Initial | Update |
 |-------|---------|--------|
-| repetitions (n) | 0 | n + 1 on success |
-| ease_factor (EF) | 2.5 | Clamp 1.3–3.0 |
-| interval (days) | 0 | Per formula |
+| repetitions (n) | 0 | incremented on success in learning |
+| ease_factor (EF) | 2.5 | clamp [1.30, 3.00] |
+| interval_days | 0 | per rules below |
+| state | `new` | `new` → `learning` → `review` → `graduated` |
 
 ### 6.2 Rating → Update Rules
-| Rating | Quality (q) | Repetitions | Interval |
-|--------|-------------|-------------|----------|
-| Again | 2 | 0 | ≤ 1 day |
-| Hard | 3 | n | 1.2 × interval |
-| Good | 4 | n + 1 | interval × EF (n=1: 6 days for good) |
-| Easy | 5 | n + 1 | interval × EF × 1.3 |
+| Rating | Value | State `new`/`learning` | State `review` | EF |
+|--------|-------|------------------------|----------------|----|
+| Again | 1 | → `learning`, interval 1d | → `learning`, interval 1d | EF −= 0.20 (floor 1.30) |
+| Hard | 2 | interval = 1d (graduating), → `learning` | interval × 1.20, stays `review` | EF −= 0.15 |
+| Good | 3 | interval = 1d (graduating); second success → `review`, 2d | interval × EF, stays `review` | EF unchanged |
+| Easy | 4 | graduate immediately: 4d, → `review` | interval × EF × 1.30, stays `review` | EF += 0.10 (cap 3.00) |
 
-EF update: `EF' = EF + (0.1 − (5 − q) × (0.08 + (5 − q) × 0.02))` with floor at 1.3.
+EF adjustment in learning follows the SM-2 form `EF += 0.1 − (5−q)(0.08 + (5−q)·0.02)` with floor 1.30. Constants: graduating interval 1 day, easy graduating interval 4 days, easy bonus 1.30, hard multiplier 1.20, EF floor 1.30.
 
 ### 6.3 Algorithm Steps
-1. Fetch `cards` where `due_date <= today`, ordered by due_date ASC (oldest-first).
-2. Present front (word) → user recalls → reveal back (root, meaning, example).
-3. User self-rates (again / hard / good / easy).
-4. Update EF, interval, repetitions, due_date, status per rules above.
-5. Log to `card_reviews`.
-6. Update streak counters in `users` and gamification tables.
+1. Fetch `srs_cards` where `due_date <= now`, ordered by `due_date` ASC (oldest-first).
+2. Present front → user recalls → reveal back (root, meaning, example).
+3. User self-rates 1–4 (Again / Hard / Good / Easy).
+4. Update EF, interval, repetitions, due_date, state per §6.2.
+5. Append to `srs_review_logs` (with previous/new interval and EF, duration).
+6. Update streak counters in `users` and gamification data.
+
+> FSRS is explicitly deferred; see `docs/decisions/srs-design.md`.
 
 ---
 

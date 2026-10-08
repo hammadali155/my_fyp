@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.meher.jawhar.data.api.srsDue
+import com.meher.jawhar.data.api.srsReview
 import com.meher.jawhar.theme.*
 
 data class DrillCard(
@@ -30,6 +33,16 @@ data class DrillCard(
     val lemma: String,
     val translation: String,
     val posTag: String,
+)
+
+fun srsCardToDrill(c: com.meher.jawhar.data.api.SRSCardDto): DrillCard = DrillCard(
+    id = c.id,
+    wordArabic = c.front,
+    surahContext = if (c.surah_number != null && c.ayah_number != null) "${c.surah_number}:${c.ayah_number}" else "",
+    root = c.hint ?: "",
+    lemma = "",
+    translation = c.back,
+    posTag = c.state,
 )
 
 val sampleDrillCards = listOf(
@@ -45,8 +58,31 @@ fun SpacedRepetitionView() {
     var isFlipped by remember { mutableStateOf(false) }
     var xpEarned by remember { mutableStateOf(120) }
     var reviewsCompleted by remember { mutableStateOf(0) }
+    var loggedIn by remember { mutableStateOf(com.meher.jawhar.data.api.Session.accessToken != null) }
+    var liveCards by remember { mutableStateOf<List<DrillCard>>(emptyList()) }
+    var liveError by remember { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
-    val currentCard = sampleDrillCards.getOrNull(cardIndex % sampleDrillCards.size)
+    if (!loggedIn) {
+        LoginGate(onLoggedIn = { loggedIn = true })
+        return
+    }
+
+    LaunchedEffect(Unit) {
+        try {
+            val api = com.meher.jawhar.data.api.ApiClient()
+            liveCards = api.srsDue().cards.map { srsCardToDrill(it) }
+        } catch (e: Exception) {
+            liveError = e.message
+        }
+    }
+
+    if (liveError != null) {
+        Text("Could not load due cards: $liveError", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
+    }
+
+    val sourceCards = if (liveCards.isNotEmpty()) liveCards else sampleDrillCards
+    val currentCard = sourceCards.getOrNull(cardIndex % sourceCards.size)
 
     LazyColumn(
         modifier = Modifier
@@ -204,6 +240,11 @@ fun SpacedRepetitionView() {
                             .weight(1f)
                             .height(48.dp)
                             .clickable {
+                                if (liveCards.isNotEmpty()) {
+                                    scope.launch {
+                                        try { com.meher.jawhar.data.api.ApiClient().srsReview(sourceCards[cardIndex % sourceCards.size].id, 1) } catch (_: Exception) {}
+                                    }
+                                }
                                 cardIndex++
                                 isFlipped = false
                                 reviewsCompleted++
@@ -227,6 +268,11 @@ fun SpacedRepetitionView() {
                             .weight(1f)
                             .height(48.dp)
                             .clickable {
+                                if (liveCards.isNotEmpty()) {
+                                    scope.launch {
+                                        try { com.meher.jawhar.data.api.ApiClient().srsReview(sourceCards[cardIndex % sourceCards.size].id, 2) } catch (_: Exception) {}
+                                    }
+                                }
                                 cardIndex++
                                 isFlipped = false
                                 xpEarned += 5
@@ -251,6 +297,11 @@ fun SpacedRepetitionView() {
                             .weight(1f)
                             .height(48.dp)
                             .clickable {
+                                if (liveCards.isNotEmpty()) {
+                                    scope.launch {
+                                        try { com.meher.jawhar.data.api.ApiClient().srsReview(sourceCards[cardIndex % sourceCards.size].id, 3) } catch (_: Exception) {}
+                                    }
+                                }
                                 cardIndex++
                                 isFlipped = false
                                 xpEarned += 10
@@ -275,6 +326,11 @@ fun SpacedRepetitionView() {
                             .weight(1f)
                             .height(48.dp)
                             .clickable {
+                                if (liveCards.isNotEmpty()) {
+                                    scope.launch {
+                                        try { com.meher.jawhar.data.api.ApiClient().srsReview(sourceCards[cardIndex % sourceCards.size].id, 4) } catch (_: Exception) {}
+                                    }
+                                }
                                 cardIndex++
                                 isFlipped = false
                                 xpEarned += 15
@@ -294,5 +350,35 @@ fun SpacedRepetitionView() {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun LoginGate(onLoggedIn: () -> Unit) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Sign in to sync your reviews", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
+        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
+        Button(onClick = {
+            loading = true
+            error = null
+            scope.launch {
+                try {
+                    com.meher.jawhar.data.api.AuthApi.login(com.meher.jawhar.data.api.ApiClient(), email, password)
+                    onLoggedIn()
+                } catch (e: Exception) {
+                    error = e.message
+                } finally {
+                    loading = false
+                }
+            }
+        }) { Text(if (loading) "..." else "Log in") }
+        if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error)
     }
 }

@@ -1,0 +1,7 @@
+surah	ayah	word	segment	form	root	lemma	pos	pattern	tense	voice	gender	number	person
+1	1	1	0	بِ			P						
+1	1	1	1	سْمِ	سمو	اسْم	N				M	S	
+1	1	2	0	اللَّهِ	اله	اللَّه	PN				M	S	
+1	2	1	0	الْحَمْدُ	حمد	حَمْد	N				M	S	
+108	1	1	0	إِنَّ			ACC						
+108	1	3	0	الْكَوْثَرَ	كثر	كَوْثَر	N				M	S	
