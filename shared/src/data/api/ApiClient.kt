@@ -54,6 +54,17 @@ object AuthApi {
         Session.userName = res.user.name
         return res
     }
+
+    suspend fun register(api: ApiClient, email: String, name: String, password: String): AuthResponseDto {
+        val res: AuthResponseDto = api.http.post("${api.baseUrl}/api/v1/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequestDto(email = email, name = name, password = password))
+        }.body()
+        Session.accessToken = res.tokens.access_token
+        Session.refreshToken = res.tokens.refresh_token
+        Session.userName = res.user.name
+        return res
+    }
 }
 
 suspend fun ApiClient.authorizedGet(url: String): io.ktor.client.statement.HttpResponse =
@@ -68,14 +79,22 @@ suspend fun ApiClient.authorizedPost(url: String, body: Any): io.ktor.client.sta
         setBody(body)
     }
 
-suspend fun ApiClient.srsDue(): SRSDueDto =
-    authorizedGet("$baseUrl/api/v1/srs/due").body()
+suspend fun ApiClient.me(): UserDto =
+    authorizedGet("$baseUrl/api/v1/auth/me").body()
 
-suspend fun ApiClient.srsReview(cardId: Int, rating: Int): SRSReviewResponseDto =
-    authorizedPost("$baseUrl/api/v1/srs/review", SRSReviewRequestDto(cardId, rating, null)).body()
+suspend fun ApiClient.srsDue(): List<SrsCardDto> =
+    authorizedGet("$baseUrl/api/v1/srs/due").body<SrsDueDto>().cards.map { card ->
+        card.copy(new_card = card.state == "new")
+    }
 
-suspend fun ApiClient.srsStats(): SRSStatsDto =
+suspend fun ApiClient.srsReview(cardId: Int, rating: Int): SrsReviewResponseDto =
+    authorizedPost("$baseUrl/api/v1/srs/review", SrsReviewRequestDto(cardId, rating, null)).body()
+
+suspend fun ApiClient.srsStats(): SrsStatsDto =
     authorizedGet("$baseUrl/api/v1/srs/stats").body()
+
+suspend fun ApiClient.getDecks(): List<DeckDto> =
+    authorizedGet("$baseUrl/api/v1/decks").body<DeckListDto>().items
 
 suspend fun ApiClient.search(q: String, page: Int = 1, pageSize: Int = 20): QuranSearchResponseDto =
     http.get("$baseUrl/api/v1/quran/search?q=$q&page=$page&page_size=$pageSize").body()
@@ -102,5 +121,5 @@ suspend fun ApiClient.wordFamily(root: String): WordFamilyResponseDto =
 suspend fun ApiClient.patterns(): PatternsResponseDto =
     http.get("$baseUrl/api/v1/morphology/patterns").body()
 
-suspend fun ApiClient.badges(): BadgeListResponseDto =
-    authorizedGet("$baseUrl/api/v1/progress/badges").body()
+suspend fun ApiClient.badges(): List<BadgeDto> =
+    authorizedGet("$baseUrl/api/v1/progress/badges").body<BadgeListResponseDto>().items

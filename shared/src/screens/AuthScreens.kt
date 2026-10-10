@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +27,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.meher.jawhar.data.LocalApi
+import com.meher.jawhar.data.api.AuthApi
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.LocalNav
@@ -163,14 +166,42 @@ fun GetStartedScreen() {
 @Composable
 fun SignUpScreen(validation: Boolean = false) {
     val nav = LocalNav.current
+    val api = LocalApi.current
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(if (validation) "meher@" else "") }
+    var password by remember { mutableStateOf("") }
     var agreed by remember { mutableStateOf(!validation) }
+    var loading by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    var submit by remember { mutableStateOf(false) }
+
+    if (submit) {
+        LaunchedEffect(Unit) {
+            submit = false
+            loading = true
+            errorMsg = null
+            try {
+                AuthApi.register(api, email, name, password)
+                nav.go(Dest.Verify)
+            } catch (e: Exception) {
+                errorMsg = "Could not create account. Check your details and try again."
+            } finally {
+                loading = false
+            }
+        }
+    }
+
     Page {
         BigTitle("Create your account", "Start your Arabic journey in a minute.")
-        StatefulField("Full name", "Meher Ali", trailing = JI.User)
-        StatefulField("Email", if (validation) "meher@" else "", "you@example.com", helper = if (validation) "Enter a valid email address" else null, isError = validation, trailing = JI.Mail)
-        StatefulField("Password", if (validation) "•••••" else "", "Minimum 8 characters", helper = if (validation) "Use at least 8 characters" else null, isError = validation, password = !validation)
-        CheckRow(agreed, { agreed = it }, "I agree to the Terms and Privacy Policy", if (validation && !agreed) "Please accept the terms to continue" else null)
-        JButton("Create account", { nav.go(Dest.Verify) }, enabled = !validation)
+        if (errorMsg != null) JBanner(JBannerKind.Error, "Sign up failed", errorMsg!!)
+        JTextField(name, { name = it }, "Full name", placeholder = "Meher Ali", trailing = JI.User)
+        JTextField(email, { email = it }, "Email", placeholder = "you@example.com",
+            helper = if (validation && email.isNotBlank() && !email.contains("@")) "Enter a valid email address" else null,
+            isError = validation && !email.contains("@"), trailing = JI.Mail)
+        JTextField(password, { password = it }, "Password", placeholder = "Minimum 8 characters", password = true)
+        CheckRow(agreed, { agreed = it }, "I agree to the Terms and Privacy Policy")
+        JButton("Create account", { submit = true },
+            enabled = !loading && name.isNotBlank() && email.contains("@") && password.length >= 8 && agreed)
         OrDivider()
         JButton("Continue with Google", { nav.go(Dest.PlacementIntro) }, style = JButtonStyle.Neutral)
         FooterLink("Already have an account?", "Log in") { nav.go(Dest.LogIn) }
@@ -180,15 +211,41 @@ fun SignUpScreen(validation: Boolean = false) {
 @Composable
 fun LogInScreen(error: Boolean = false) {
     val nav = LocalNav.current
+    val api = LocalApi.current
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(error) }
+    var submit by remember { mutableStateOf(false) }
+
+    if (submit) {
+        LaunchedEffect(Unit) {
+            submit = false
+            loading = true
+            failed = false
+            try {
+                AuthApi.login(api, email, password)
+                nav.reset(Dest.Home)
+            } catch (e: Exception) {
+                failed = true
+            } finally {
+                loading = false
+            }
+        }
+    }
+
     Page {
         BigTitle("Welcome back", "Pick up right where you left off.")
-        if (error) JBanner(JBannerKind.Error, "Could not log in", "Check your email and password, then try again.")
-        StatefulField("Email", "meher@email.com", trailing = JI.Mail)
-        StatefulField("Password", "••••••••••", helper = if (error) "That password is not correct" else null, isError = error, password = !error)
+        if (failed) JBanner(JBannerKind.Error, "Could not log in", "Check your email and password, then try again.")
+        JTextField(email, { email = it }, "Email", placeholder = "you@example.com",
+            isError = failed, trailing = JI.Mail)
+        JTextField(password, { password = it }, "Password",
+            helper = if (failed) "That password is not correct" else null,
+            isError = failed, password = true)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             JText("Forgot password?", Jawhar.type.labelL, Jawhar.colors.primary, Modifier.tappable { nav.go(Dest.Forgot) })
         }
-        JButton("Log in", { nav.reset(Dest.Home) })
+        JButton("Log in", { submit = true }, enabled = !loading && email.isNotBlank() && password.isNotBlank())
         OrDivider()
         JButton("Continue with Google", { nav.reset(Dest.Home) }, style = JButtonStyle.Neutral)
         FooterLink("New here?", "Create an account") { nav.go(Dest.SignUp) }

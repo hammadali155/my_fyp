@@ -51,7 +51,8 @@ Not done:
 - ~~No `nahw_annotations` table~~ — added and populated 2026-10-04.
 - ~~Frontend still runs on hard-coded sample data; no API client yet~~ — mock UI complete 2026-10-10; `ApiClient` scaffolded and wired to all existing backend endpoints.
 - CAMeL Tools integration, Farasa sidecar, Nahw endpoints, AI Tutor, learning path, gamification, admin/CMS, notifications, Redis caching and rate limiting.
-- Screens are still mock/static — wiring live API calls into screen composables is next.
+- Frontend API wiring complete (2026-10-10): `HomeScreen`, `SurahListScreen`, `SearchScreen`, `SarfEngineScreen`, `WordFamilyScreen`, `ConjugationScreen`, `FlashcardScreen`, `VocabularyScreen`, `ProfileScreen`, `BadgesScreen`, `LogInScreen`, `SignUpScreen` all wired to real API via `LocalApi`. `AppState` singleton + `LocalApi` CompositionLocal added in `data/AppState.kt`.
+- Screens still on mock data: `AyahReaderScreen` (needs verse-level navigation with surahId), `HomeLearnScreens` (lesson path not yet backend-backed), `NahwResultScreen` (no nahw parse endpoint yet), `TutorScreens` (AI tutor not yet built).
 
 ## Repository Structure
 

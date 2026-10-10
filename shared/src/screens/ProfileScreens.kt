@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,6 +23,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.meher.jawhar.data.AppState
+import com.meher.jawhar.data.LocalApi
+import com.meher.jawhar.data.api.BadgeDto
+import com.meher.jawhar.data.api.UserDto
+import com.meher.jawhar.data.api.me
+import com.meher.jawhar.data.api.badges
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.LocalNav
@@ -115,19 +122,36 @@ fun LeaderboardScreen() {
 
 @Composable
 fun BadgesScreen() {
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
     var filter by remember { mutableStateOf(0) }
+    var badges by remember { mutableStateOf<List<BadgeDto>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        try { badges = api.badges() } catch (e: Exception) { } finally { loading = false }
+    }
+
+    val unlocked = badges.count { it.unlocked }
     Page {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             JText("Badges", t.headlineL, c.onSurface, Modifier.weight(1f))
-            JText("12 of 30+", t.labelL, c.onSurfaceVariant)
+            JText("$unlocked of ${badges.size}", t.labelL, c.onSurfaceVariant)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("All", "Unlocked", "Locked").forEachIndexed { i, l -> JChip(l, filter == i, { filter = i }) } }
-        Mock.badges.filter { filter == 0 || (filter == 1 && it.unlocked) || (filter == 2 && !it.unlocked) }.chunked(3).forEach { row ->
-            Row(Modifier.fillMaxWidth()) {
-                row.forEach { JBadgeTile(it.title, it.caption, it.unlocked, Modifier.weight(1f)) }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+        if (loading) {
+            repeat(3) {
+                Row(Modifier.fillMaxWidth()) {
+                    repeat(3) { JSkeleton(Modifier.weight(1f).height(96.dp).padding(4.dp), radius = 20.dp) }
+                }
+            }
+        } else {
+            badges.filter { filter == 0 || (filter == 1 && it.unlocked) || (filter == 2 && !it.unlocked) }.chunked(3).forEach { row ->
+                Row(Modifier.fillMaxWidth()) {
+                    row.forEach { b -> JBadgeTile(b.name, b.description, b.unlocked, Modifier.weight(1f)) }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
             }
         }
     }
@@ -136,23 +160,36 @@ fun BadgesScreen() {
 @Composable
 fun ProfileScreen() {
     val nav = LocalNav.current
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
+    var user by remember { mutableStateOf<UserDto?>(null) }
+
+    LaunchedEffect(Unit) {
+        try { user = api.me() } catch (e: Exception) { }
+    }
+
+    val name = user?.name ?: "Loading…"
+    val initials = name.split(" ").take(2).joinToString("") { it.take(1) }.uppercase()
+    val streak = user?.streak_days ?: 0
+    val xp = user?.xp ?: 0
+    val level = user?.level ?: "beginner"
+
     Page(back = false, tab = JTab.Profile, right = JI.Sliders, onRight = { nav.go(Dest.Settings) }) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(190.dp).starOrnaments(c.accent, StarSpec(95.dp, 95.dp, 190.dp, 0.3f)), contentAlignment = Alignment.Center) { JAvatar("MA", size = 88.dp) }
-            JText("Meher Ali", t.headlineM, c.onSurface)
-            JText("Beginner II · Joined Oct 2026", t.bodyM, c.onSurfaceVariant)
+            Box(Modifier.size(190.dp).starOrnaments(c.accent, StarSpec(95.dp, 95.dp, 190.dp, 0.3f)), contentAlignment = Alignment.Center) { JAvatar(initials, size = 88.dp) }
+            JText(name, t.headlineM, c.onSurface)
+            JText("${level.replaceFirstChar { it.uppercase() }} · Joined ${user?.created_at?.take(7) ?: ""}", t.bodyM, c.onSurfaceVariant)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            JStatTile(JI.Flame, "12", "Day streak", c.accentContainer, c.onAccentContainer, Modifier.weight(1f))
-            JStatTile(JI.Bolt, "2,480", "Total XP", c.primaryContainer, c.onPrimaryContainer, Modifier.weight(1f))
-            JStatTile(JI.Cards, "342", "Words learned", c.infoContainer, c.info, Modifier.weight(1f))
+            JStatTile(JI.Flame, streak.toString(), "Day streak", c.accentContainer, c.onAccentContainer, Modifier.weight(1f))
+            JStatTile(JI.Bolt, xp.toString(), "Total XP", c.primaryContainer, c.onPrimaryContainer, Modifier.weight(1f))
+            JStatTile(JI.Cards, "?", "Words learned", c.infoContainer, c.info, Modifier.weight(1f))
         }
         JListItem("Progress", subtitle = "Weekly activity and topic mastery", icon = JI.Chart, onClick = { nav.go(Dest.Progress) })
-        JListItem("Leaderboard", subtitle = "Rank 9 this week", icon = JI.Trophy, onClick = { nav.go(Dest.Leaderboard) })
-        JListItem("Badges", subtitle = "12 of 30+ unlocked", icon = JI.Star, onClick = { nav.go(Dest.Badges) })
-        JListItem("Bookmarks", subtitle = "23 saved ayat and words", icon = JI.Bookmark, onClick = { nav.go(Dest.Quran) })
+        JListItem("Leaderboard", subtitle = "This week's rankings", icon = JI.Trophy, onClick = { nav.go(Dest.Leaderboard) })
+        JListItem("Badges", subtitle = "Achievements unlocked", icon = JI.Star, onClick = { nav.go(Dest.Badges) })
+        JListItem("Bookmarks", subtitle = "Saved ayat and words", icon = JI.Bookmark, onClick = { nav.go(Dest.Quran) })
     }
 }
 
@@ -165,7 +202,10 @@ fun SettingsScreen(showLogout: Boolean = false, showDelete: Boolean = false) {
     var logout by remember { mutableStateOf(showLogout) }
     var delete by remember { mutableStateOf(showDelete) }
     Page(overlay = {
-        if (logout) JDialog("Log out?", "You can log back in at any time. Your progress is saved to your account.", "Log out", { nav.reset(Dest.GetStarted) }, { logout = false }, icon = JI.Logout)
+        if (logout) JDialog("Log out?", "You can log back in at any time. Your progress is saved to your account.", "Log out", {
+            AppState.logout()
+            nav.reset(Dest.GetStarted)
+        }, { logout = false }, icon = JI.Logout)
         if (delete) JDialog("Delete your account?", "All progress, streaks and bookmarks will be permanently removed. This cannot be undone.", "Delete", { nav.reset(Dest.GetStarted) }, { delete = false }, icon = JI.Trash, destructive = true)
     }) {
         JText("Settings", t.headlineL, c.onSurface)

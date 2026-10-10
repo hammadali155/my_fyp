@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,9 +27,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.meher.jawhar.data.LocalApi
+import com.meher.jawhar.data.api.SurahDto
+import com.meher.jawhar.data.api.SearchItemDto
+import com.meher.jawhar.data.api.search
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.LocalNav
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -60,10 +66,25 @@ fun AyahBlock(item: AyahItem, highlight: List<Int> = emptyList(), onWord: (Int) 
 @Composable
 fun SurahListScreen() {
     val nav = LocalNav.current
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
     var q by remember { mutableStateOf("") }
     var tab by remember { mutableStateOf(0) }
+    var surahs by remember { mutableStateOf<List<SurahDto>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var loadError by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        try {
+            surahs = api.getSurahs()
+        } catch (e: Exception) {
+            loadError = true
+        } finally {
+            loading = false
+        }
+    }
+
     Page(back = false, tab = JTab.Quran, right = JI.Bookmark) {
         JText("Quran", t.headlineL, c.onSurface)
         JSearchField(q, { q = it }, "Search surah, ayah or word")
@@ -81,18 +102,31 @@ fun SurahListScreen() {
             }
             Box(Modifier.size(48.dp).clip(CapsuleShape).background(c.primary), contentAlignment = Alignment.Center) { JIcon(JI.Chevron, size = 20.dp, tint = c.onPrimary, strokeWidth = 2.2.dp) }
         }
-        Mock.surahs.filter { q.isBlank() || it.name.contains(q, ignoreCase = true) }.forEach { s ->
-            Row(
-                Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).tappable { nav.go(Dest.Reader) }.padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                JStarBadge(s.number.toString())
-                Column(Modifier.weight(1f)) {
-                    JText(s.name, t.titleM, c.onSurface)
-                    JText(s.meta, t.bodyS, c.onSurfaceVariant)
+        when {
+            loading -> repeat(8) {
+                Row(Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    JSkeleton(Modifier.size(40.dp), radius = 20.dp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        JSkeleton(Modifier.fillMaxWidth(0.5f).height(14.dp))
+                        JSkeleton(Modifier.fillMaxWidth(0.75f).height(11.dp))
+                    }
+                    JSkeleton(Modifier.size(48.dp, 24.dp))
                 }
-                JArabic(s.arabic, t.arabicHeading, c.onSurface)
+            }
+            loadError -> JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load surahs", "Check your connection and pull to retry.")
+            else -> surahs.filter { q.isBlank() || it.name_english.contains(q, ignoreCase = true) || it.name_transliteration.contains(q, ignoreCase = true) }.forEach { s ->
+                Row(
+                    Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).tappable { nav.go(Dest.Reader) }.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    JStarBadge(s.number.toString())
+                    Column(Modifier.weight(1f)) {
+                        JText(s.name_transliteration, t.titleM, c.onSurface)
+                        JText("${s.revelation_place ?: ""} · ${s.verse_count} ayat".trimStart(' ', '·'), t.bodyS, c.onSurfaceVariant)
+                    }
+                    JArabic(s.name_arabic, t.arabicHeading, c.onSurface)
+                }
             }
         }
     }
@@ -157,16 +191,22 @@ fun WordSheet(onDismiss: () -> Unit, onSarf: () -> Unit) {
 
 @Composable
 fun SearchScreen(empty: Boolean = false) {
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
     val top = LocalTopInset.current
-    var q by remember { mutableStateOf(if (empty) "xyzq" else "rahma") }
+    var q by remember { mutableStateOf(if (empty) "xyzq" else "") }
     var tab by remember { mutableStateOf(0) }
-    val results = listOf(
-        Triple("Al-Fatiha 1:1", AyahItem(1, listOf("بِسْمِ", "ٱللَّهِ", "ٱلرَّحْمَٰنِ", "ٱلرَّحِيمِ"), "", "In the name of God, the Most Gracious, the Most Merciful."), listOf(2, 3)),
-        Triple("Al-Fatiha 1:3", AyahItem(3, listOf("ٱلرَّحْمَٰنِ", "ٱلرَّحِيمِ"), "", "The Most Gracious, the Most Merciful."), listOf(0, 1)),
-        Triple("Ar-Rahman 55:1", AyahItem(1, listOf("ٱلرَّحْمَٰنُ"), "", "The Most Gracious."), listOf(0)),
-    )
+    var results by remember { mutableStateOf<List<com.meher.jawhar.data.api.SearchItemDto>>(emptyList()) }
+    var searching by remember { mutableStateOf(false) }
+
+    LaunchedEffect(q) {
+        if (q.length < 2) { results = emptyList(); return@LaunchedEffect }
+        delay(400)
+        searching = true
+        try { results = api.search(q).items } catch (e: Exception) { results = emptyList() } finally { searching = false }
+    }
+
     Page(
         overlay = {
             Box(Modifier.align(Alignment.TopStart).fillMaxWidth().padding(top = top + 6.dp, start = 72.dp, end = 24.dp)) {
@@ -177,17 +217,26 @@ fun SearchScreen(empty: Boolean = false) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Ayat", "Words", "Roots").forEachIndexed { i, l -> JChip(l, tab == i, { tab = i }) }
         }
-        if (empty) {
-            Spacer(Modifier.height(40.dp))
-            JCenterState(JI.Search, c.bgSurfaceVariant, c.onSurfaceVariant, "No results for \"$q\"", "Check the spelling, or try the root letters instead.")
-        } else {
-            results.forEach { (ref, ayah, hl) ->
+        when {
+            searching -> repeat(3) {
                 JCard(Modifier.fillMaxWidth(), padding = 20.dp) {
-                    JText(ref, t.labelM, c.onSurfaceSubtle)
+                    JSkeleton(Modifier.fillMaxWidth(0.4f).height(12.dp))
+                    Spacer(Modifier.height(10.dp))
+                    JSkeleton(Modifier.fillMaxWidth().height(32.dp))
                     Spacer(Modifier.height(8.dp))
-                    AyahWords(ayah.words, hl, highlightColor = c.accentContainer)
+                    JSkeleton(Modifier.fillMaxWidth(0.8f).height(12.dp))
+                }
+            }
+            q.length >= 2 && results.isEmpty() -> {
+                Spacer(Modifier.height(40.dp))
+                JCenterState(JI.Search, c.bgSurfaceVariant, c.onSurfaceVariant, "No results for \"$q\"", "Check the spelling, or try the root letters instead.")
+            }
+            else -> results.forEach { r ->
+                JCard(Modifier.fillMaxWidth(), padding = 20.dp) {
+                    JText("${r.surah_name_english} ${r.surah_number}:${r.ayah_number}", t.labelM, c.onSurfaceSubtle)
                     Spacer(Modifier.height(8.dp))
-                    JText(ayah.english, t.bodyS, c.onSurfaceVariant)
+                    JArabic(r.text_uthmani, t.arabicQuranM, c.onSurface, Modifier.fillMaxWidth())
+                    if (r.translation_en != null) { Spacer(Modifier.height(8.dp)); JText(r.translation_en, t.bodyS, c.onSurfaceVariant) }
                 }
             }
         }

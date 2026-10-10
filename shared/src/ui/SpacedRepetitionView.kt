@@ -35,14 +35,14 @@ data class DrillCard(
     val posTag: String,
 )
 
-fun srsCardToDrill(c: com.meher.jawhar.data.api.SRSCardDto): DrillCard = DrillCard(
+fun srsCardToDrill(c: com.meher.jawhar.data.api.SrsCardDto): DrillCard = DrillCard(
     id = c.id,
     wordArabic = c.front,
-    surahContext = if (c.surah_number != null && c.ayah_number != null) "${c.surah_number}:${c.ayah_number}" else "",
-    root = c.hint ?: "",
+    surahContext = "",
+    root = c.word_root ?: "",
     lemma = "",
     translation = c.back,
-    posTag = c.state,
+    posTag = c.word_pos_tag ?: c.state,
 )
 
 val sampleDrillCards = listOf(
@@ -71,7 +71,7 @@ fun SpacedRepetitionView() {
     LaunchedEffect(Unit) {
         try {
             val api = com.meher.jawhar.data.api.ApiClient()
-            liveCards = api.srsDue().cards.map { srsCardToDrill(it) }
+            liveCards = api.srsDue().map { srsCardToDrill(it) }
         } catch (e: Exception) {
             liveError = e.message
         }

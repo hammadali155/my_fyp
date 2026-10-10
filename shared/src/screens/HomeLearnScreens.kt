@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.meher.jawhar.data.LocalApi
+import com.meher.jawhar.data.api.me
+import com.meher.jawhar.data.api.srsDue
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.LocalNav
@@ -37,9 +41,30 @@ import com.meher.jawhar.nav.LocalNav
 @Composable
 fun HomeScreen() {
     val nav = LocalNav.current
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
     val top = LocalTopInset.current
+    var userName by remember { mutableStateOf("there") }
+    var streak by remember { mutableStateOf(0) }
+    var xp by remember { mutableStateOf(0) }
+    var dueCount by remember { mutableStateOf(0) }
+    var newCount by remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val user = api.me()
+            userName = user.name.split(" ").first()
+            streak = user.streak_days
+            xp = user.xp
+        } catch (e: Exception) { }
+        try {
+            val due = api.srsDue()
+            dueCount = due.size
+            newCount = due.count { it.new_card }
+        } catch (e: Exception) { }
+    }
+
     Page(
         back = false,
         tab = JTab.Home,
@@ -52,24 +77,24 @@ fun HomeScreen() {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 JIcon(JI.Flame, size = 22.dp, tint = c.onAccentContainer)
-                JText("12 days", t.labelL, c.onSurface)
+                JText("$streak days", t.labelL, c.onSurface)
             }
         },
     ) {
         Column {
             JText("As-salamu alaykum,", t.bodyL, c.onSurfaceVariant)
-            JText("Meher", t.headlineL, c.onSurface)
+            JText(userName, t.headlineL, c.onSurface)
         }
         HeroCard(Modifier.fillMaxWidth(), stars = listOf(StarSpec(330.dp, 20.dp, 250.dp, 0.26f), StarSpec(300.dp, 190.dp, 170.dp, 0.18f))) {
             JText("TODAY'S REVIEW", t.labelS, c.accent)
-            JText("15 cards to review today", t.headlineM, c.onPrimary, Modifier.padding(top = 4.dp, end = 80.dp))
-            JText("About 6 minutes · 4 new words", t.bodyM, c.onPrimary.copy(alpha = 0.82f), Modifier.padding(top = 8.dp))
+            JText("$dueCount cards to review today", t.headlineM, c.onPrimary, Modifier.padding(top = 4.dp, end = 80.dp))
+            JText("$newCount new words in queue", t.bodyM, c.onPrimary.copy(alpha = 0.82f), Modifier.padding(top = 8.dp))
             JButton("Start session", { nav.go(Dest.FlashFront) }, Modifier.padding(top = 16.dp).width(150.dp), JButtonStyle.Accent, height = 44.dp)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            JStatTile(JI.Flame, "12", "Day streak", c.accentContainer, c.onAccentContainer, Modifier.weight(1f))
-            JStatTile(JI.Bolt, "2,480", "Total XP", c.primaryContainer, c.onPrimaryContainer, Modifier.weight(1f))
-            JStatTile(JI.Cards, "342", "Words learned", c.infoContainer, c.info, Modifier.weight(1f))
+            JStatTile(JI.Flame, streak.toString(), "Day streak", c.accentContainer, c.onAccentContainer, Modifier.weight(1f))
+            JStatTile(JI.Bolt, xp.toString(), "Total XP", c.primaryContainer, c.onPrimaryContainer, Modifier.weight(1f))
+            JStatTile(JI.Cards, dueCount.toString(), "Due today", c.infoContainer, c.info, Modifier.weight(1f))
         }
         Row(
             Modifier.fillMaxWidth().clip(SquircleShape(30.dp)).background(c.bgSurfaceVariant).tappable { nav.go(Dest.LessonIntro) }.padding(20.dp),

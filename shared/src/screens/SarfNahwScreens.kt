@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,12 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.meher.jawhar.data.LocalApi
+import com.meher.jawhar.data.api.AnalyzeResponseDto
+import com.meher.jawhar.data.api.WordFamilyResponseDto
+import com.meher.jawhar.data.api.ConjugateResponseDto
+import com.meher.jawhar.data.api.wordFamily
+import com.meher.jawhar.data.api.conjugate
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.LocalNav
@@ -45,52 +52,87 @@ import kotlin.math.sin
 @Composable
 fun SarfEngineScreen(timeout: Boolean = false) {
     val nav = LocalNav.current
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
     var word by remember { mutableStateOf("يَكْتُبُونَ") }
+    var loading by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(timeout) }
+    var result by remember { mutableStateOf<AnalyzeResponseDto?>(null) }
+    var analyse by remember { mutableStateOf(false) }
+
+    if (analyse) {
+        LaunchedEffect(word) {
+            analyse = false
+            loading = true
+            failed = false
+            result = null
+            try {
+                result = api.analyze(word)
+            } catch (e: Exception) {
+                failed = true
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    val root = result?.root
+    val showResult = result != null
+
     Page(
         title = "Sarf Engine",
         right = JI.More,
         cta = {
-            if (timeout) JButton("Back", { nav.back() }, style = JButtonStyle.Neutral)
-            else TwoButtons("Word family", { nav.go(Dest.WordFamily) }, "Conjugation", { nav.go(Dest.Conjugation) })
+            if (failed) JButton("Back", { nav.back() }, style = JButtonStyle.Neutral)
+            else if (showResult) TwoButtons("Word family", { nav.go(Dest.WordFamily) }, "Conjugation", { nav.go(Dest.Conjugation) })
         },
     ) {
         JCard(Modifier.fillMaxWidth(), radius = 30.dp, padding = 20.dp) {
             JText("ARABIC WORD", t.labelS, c.onSurfaceSubtle)
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                BasicTextField(word, { word = it }, Modifier.fillMaxWidth(), textStyle = t.arabicQuranL.copy(color = c.onSurface), cursorBrush = SolidColor(c.primary), singleLine = true)
+                BasicTextField(word, { word = it; result = null }, Modifier.fillMaxWidth(), textStyle = t.arabicQuranL.copy(color = c.onSurface), cursorBrush = SolidColor(c.primary), singleLine = true)
             }
-            JButton("Analyse", {}, Modifier.width(112.dp), height = 36.dp)
+            JButton("Analyse", { analyse = true }, Modifier.width(112.dp), height = 36.dp, enabled = !loading && word.isNotBlank())
         }
-        if (timeout) {
-            Column(Modifier.fillMaxWidth().clip(SquircleShape(34.dp)).background(c.errorContainer).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(44.dp).clip(CircleShape).background(c.bgSurface), contentAlignment = Alignment.Center) { JIcon(JI.Clock, size = 22.dp, tint = c.error) }
-                JText("The analyser is taking too long", t.headlineS, c.onSurface)
-                JText("This can happen with long sentences or a slow connection. Your word was not lost.", t.bodyM, c.onSurfaceVariant)
-                JButton("Try again", {}, Modifier.width(120.dp), height = 40.dp)
+        when {
+            loading -> {
+                JSkeleton(Modifier.fillMaxWidth().height(120.dp), radius = 34.dp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    repeat(2) { JSkeleton(Modifier.weight(1f).height(72.dp), radius = 22.dp) }
+                }
             }
-        } else {
-            HeroCard(color = c.primaryContainer, starColor = c.primary, stars = listOf(StarSpec(330.dp, 20.dp, 220.dp, 0.2f))) {
-                JText("ROOT", t.labelS, c.onPrimaryContainer)
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        listOf("ك", "ت", "ب").forEach { l ->
-                            Box(Modifier.size(56.dp).clip(CircleShape).background(c.bgSurface), contentAlignment = Alignment.Center) { JArabic(l, t.arabicHeading, c.onPrimaryContainer) }
+            failed -> {
+                Column(Modifier.fillMaxWidth().clip(SquircleShape(34.dp)).background(c.errorContainer).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(c.bgSurface), contentAlignment = Alignment.Center) { JIcon(JI.Clock, size = 22.dp, tint = c.error) }
+                    JText("The analyser is taking too long", t.headlineS, c.onSurface)
+                    JText("This can happen with long sentences or a slow connection. Your word was not lost.", t.bodyM, c.onSurfaceVariant)
+                    JButton("Try again", { analyse = true }, Modifier.width(120.dp), height = 40.dp)
+                }
+            }
+            showResult -> {
+                val r = result!!
+                HeroCard(color = c.primaryContainer, starColor = c.primary, stars = listOf(StarSpec(330.dp, 20.dp, 220.dp, 0.2f))) {
+                    JText("ROOT", t.labelS, c.onPrimaryContainer)
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            (r.root ?: "—").split(" ").take(3).forEach { l ->
+                                Box(Modifier.size(56.dp).clip(CircleShape).background(c.bgSurface), contentAlignment = Alignment.Center) { JArabic(l, t.arabicHeading, c.onPrimaryContainer) }
+                            }
                         }
                     }
+                    Row(Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) { JText("Pattern", t.labelM, c.onPrimaryContainer.copy(alpha = 0.8f)); JText(r.pattern ?: "—", t.titleM, c.onSurface) }
+                        Column(Modifier.weight(1f)) { JText("Lemma", t.labelM, c.onPrimaryContainer.copy(alpha = 0.8f)); JText(r.lemma ?: "—", t.titleM, c.onSurface) }
+                    }
                 }
-                Row(Modifier.fillMaxWidth()) {
-                    Column(Modifier.weight(1f)) { JText("Pattern", t.labelM, c.onPrimaryContainer.copy(alpha = 0.8f)); JText("يَفْعُلُونَ · Form I", t.titleM, c.onSurface) }
-                    Column(Modifier.weight(1f)) { JText("Lemma", t.labelM, c.onPrimaryContainer.copy(alpha = 0.8f)); JText("كَتَبَ · to write", t.titleM, c.onSurface) }
-                }
-            }
-            listOf("Tense" to "Present", "Voice" to "Active", "Person" to "Third", "Number" to "Plural", "Gender" to "Masculine", "Mood" to "Indicative").chunked(2).forEach { pair ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    pair.forEach { (a, b) ->
-                        Column(Modifier.weight(1f).clip(SquircleShape(22.dp)).background(c.bgSurfaceVariant).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            JText(a, t.labelM, c.onSurfaceSubtle)
-                            JText(b, t.titleM, c.onSurface)
+                listOf("POS" to (r.pos_tag ?: "—"), "Source" to (r.source ?: "—"), "In corpus" to if (r.is_quranic == true) "Yes" else "No").chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        pair.forEach { (a, b) ->
+                            Column(Modifier.weight(1f).clip(SquircleShape(22.dp)).background(c.bgSurfaceVariant).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                JText(a, t.labelM, c.onSurfaceSubtle)
+                                JText(b, t.titleM, c.onSurface)
+                            }
                         }
                     }
                 }
@@ -101,10 +143,23 @@ fun SarfEngineScreen(timeout: Boolean = false) {
 
 @Composable
 fun WordFamilyScreen() {
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
     var filter by remember { mutableStateOf(0) }
-    val nodes = listOf(Triple("كَتَبَ", c.primaryContainer, -90.0), Triple("كِتَابٌ", c.accentContainer, -18.0), Triple("كَاتِبٌ", c.infoContainer, 54.0), Triple("مَكْتُوبٌ", c.infoContainer, 126.0), Triple("مَكْتَبَةٌ", c.accentContainer, 198.0))
+    var family by remember { mutableStateOf<WordFamilyResponseDto?>(null) }
+    var loading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        try { family = api.wordFamily("كتب") } catch (e: Exception) { } finally { loading = false }
+    }
+
+    val groups = family?.groups ?: emptyList()
+    val allColors = listOf(c.primaryContainer, c.accentContainer, c.infoContainer, c.successContainer, c.errorContainer)
+    val nodes = groups.take(5).mapIndexed { i, g ->
+        Triple(g.lemma ?: g.pos_tag ?: "?", allColors[i % allColors.size], -90.0 + i * 72.0)
+    }
+
     Page(title = "Word family", right = JI.More) {
         Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
             Canvas(Modifier.size(300.dp)) {
@@ -116,7 +171,9 @@ fun WordFamilyScreen() {
                     drawLine(c.outline, ctr, Offset(ctr.x + (r * cos(a)).toFloat(), ctr.y + (r * sin(a)).toFloat()), strokeWidth = 1.5.dp.toPx())
                 }
             }
-            Box(Modifier.size(104.dp).softShadow(CircleShape, 12.dp, 0.3f).clip(CircleShape).background(c.primary), contentAlignment = Alignment.Center) { JArabic("ك ت ب", t.arabicHeading, c.onPrimary) }
+            Box(Modifier.size(104.dp).softShadow(CircleShape, 12.dp, 0.3f).clip(CircleShape).background(c.primary), contentAlignment = Alignment.Center) {
+                JArabic(family?.root ?: "ك ت ب", t.arabicHeading, c.onPrimary)
+            }
             nodes.forEach { n ->
                 val a = n.third * PI / 180.0
                 Box(Modifier.offset(x = (112 * cos(a)).dp, y = (112 * sin(a)).dp).size(76.dp).clip(CircleShape).background(n.second), contentAlignment = Alignment.Center) {
@@ -127,10 +184,23 @@ fun WordFamilyScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("All", "Verbs", "Nouns", "Participles").forEachIndexed { i, l -> JChip(l, filter == i, { filter = i }) }
         }
-        listOf(Triple("كَتَبَ", "to write", "Verb · Form I"), Triple("كِتَابٌ", "book", "Noun"), Triple("كَاتِبٌ", "writer", "Active participle"), Triple("مَكْتُوبٌ", "written", "Passive participle")).forEach { (ar, en, kind) ->
-            Row(Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { JText(en, t.titleM, c.onSurface); JText(kind, t.bodyS, c.onSurfaceVariant) }
-                JArabic(ar, t.arabicHeading, c.onSurface)
+        if (loading) {
+            repeat(4) { JSkeleton(Modifier.fillMaxWidth().height(52.dp), radius = 26.dp) }
+        } else {
+            val filtered = when (filter) {
+                1 -> groups.filter { it.pos_tag?.startsWith("V") == true }
+                2 -> groups.filter { it.pos_tag == "N" || it.pos_tag == "PN" }
+                3 -> groups.filter { it.pos_tag?.contains("PART") == true }
+                else -> groups
+            }
+            filtered.forEach { g ->
+                Row(Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        JText(g.lemma ?: "—", t.titleM, c.onSurface)
+                        JText("${g.pos_tag ?: "—"} · ${g.count} occurrences", t.bodyS, c.onSurfaceVariant)
+                    }
+                    if (g.lemma != null) JArabic(g.lemma, t.arabicHeading, c.onSurface)
+                }
             }
         }
     }
@@ -138,38 +208,58 @@ fun WordFamilyScreen() {
 
 @Composable
 fun ConjugationScreen() {
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
     var tense by remember { mutableStateOf(0) }
     var voice by remember { mutableStateOf(0) }
-    var form by remember { mutableStateOf(0) }
+    var formIdx by remember { mutableStateOf(0) }
+    val formNumber = formIdx + 1
+    var conjugation by remember { mutableStateOf<ConjugateResponseDto?>(null) }
+    var loading by remember { mutableStateOf(false) }
+
+    LaunchedEffect(formNumber) {
+        loading = true
+        try { conjugation = api.conjugate("كتب", formNumber) } catch (e: Exception) { } finally { loading = false }
+    }
+
     Page(title = "Conjugation", right = JI.More) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 JText("to write", t.titleL, c.onSurface)
-                JText("Form I · Root ك ت ب", t.bodyM, c.onSurfaceVariant)
+                JText("Form $formNumber · Root ك ت ب", t.bodyM, c.onSurfaceVariant)
             }
-            JArabic("كَتَبَ", t.arabicWordL, c.onSurface)
+            JArabic(conjugation?.past ?: "كَتَبَ", t.arabicWordL, c.onSurface)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Past", "Present", "Command").forEachIndexed { i, l -> JChip(l, tense == i, { tense = i }) } }
         JSegmented(listOf("Active", "Passive"), voice, { voice = it })
-        Row(Modifier.fillMaxWidth()) {
-            Spacer(Modifier.width(58.dp))
-            listOf("Singular", "Dual", "Plural").forEach { JText(it, t.labelM, c.onSurfaceSubtle, Modifier.weight(1f), TextAlign.Center) }
-        }
-        Mock.conjugation.forEachIndexed { r, row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                JText(row.label, t.labelM, c.onSurfaceVariant, Modifier.width(52.dp))
-                row.forms.forEachIndexed { cIdx, f ->
-                    Box(
-                        Modifier.weight(1f).height(52.dp).clip(SquircleShape(18.dp)).background(if (r == 0 && cIdx == 0) c.primaryContainer else c.bgSurfaceVariant),
-                        contentAlignment = Alignment.Center,
-                    ) { if (f == "—") JText(f, t.bodyM, c.onSurfaceSubtle) else JArabic(f, t.arabicTitle, c.onSurface) }
+        if (loading) {
+            repeat(5) { JSkeleton(Modifier.fillMaxWidth().height(52.dp), radius = 18.dp) }
+        } else if (conjugation?.supported == false) {
+            JInfoCard(conjugation?.unsupported_reason ?: "This root pattern is not yet supported.", "", tone = JTone.Neutral, icon = JI.Info)
+        } else {
+            Row(Modifier.fillMaxWidth()) {
+                Spacer(Modifier.width(58.dp))
+                listOf("Singular", "Dual", "Plural").forEach { JText(it, t.labelM, c.onSurfaceSubtle, Modifier.weight(1f), TextAlign.Center) }
+            }
+            val selected = when (tense) { 1 -> conjugation?.present; 2 -> conjugation?.imperative; else -> conjugation?.past }
+            Mock.conjugation.forEachIndexed { r, row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    JText(row.label, t.labelM, c.onSurfaceVariant, Modifier.width(52.dp))
+                    row.forms.forEachIndexed { cIdx, f ->
+                        Box(
+                            Modifier.weight(1f).height(52.dp).clip(SquircleShape(18.dp)).background(if (r == 0 && cIdx == 0) c.primaryContainer else c.bgSurfaceVariant),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val display = if (r == 0 && cIdx == 0) selected ?: f else f
+                            if (display == "—") JText(display, t.bodyM, c.onSurfaceSubtle) else JArabic(display, t.arabicTitle, c.onSurface)
+                        }
+                    }
                 }
             }
         }
         JText("Verb form", t.labelM, c.onSurfaceSubtle)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("I", "II", "III", "IV", "V", "VI").forEachIndexed { i, l -> JChip(l, form == i, { form = i }) } }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("I", "II", "III", "IV", "V", "VI").forEachIndexed { i, l -> JChip(l, formIdx == i, { formIdx = i }) } }
     }
 }
 

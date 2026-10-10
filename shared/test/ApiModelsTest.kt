@@ -25,8 +25,8 @@ class ApiModelsTest {
 
     @Test
     fun parsesSrsDue() {
-        val raw = """{"cards":[{"id":1,"item_type":"vocabulary","front":"f","back":"b","hint":null,"word_id":1,"surah_number":1,"ayah_number":1,"state":"new"}],"total":1,"new_count":1,"learning_count":0,"review_count":0}"""
-        val dto = json.decodeFromString<SRSDueDto>(raw)
+        val raw = """{"cards":[{"id":1,"item_type":"vocabulary","front":"f","back":"b","hint":null,"word_id":1,"state":"new"}],"total":1,"new_count":1,"learning_count":0,"review_count":0}"""
+        val dto = json.decodeFromString<SrsDueDto>(raw)
         assertEquals(1, dto.total)
         assertEquals("new", dto.cards[0].state)
     }

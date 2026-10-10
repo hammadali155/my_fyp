@@ -7,6 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import com.meher.jawhar.data.AppState
+import com.meher.jawhar.data.LocalApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,7 +28,7 @@ import org.jetbrains.compose.reload.DevelopmentEntryPoint
 fun App() {
     JawharTheme {
         val nav = remember { JNav(Dest.Splash) }
-        CompositionLocalProvider(LocalNav provides nav) {
+        CompositionLocalProvider(LocalNav provides nav, LocalApi provides AppState.api) {
             BoxWithConstraints(Modifier.fillMaxSize().background(Jawhar.colors.bgBase)) {
                 if (maxWidth > 760.dp && maxHeight > 560.dp) {
                     DesktopShell(nav, maxHeight)
