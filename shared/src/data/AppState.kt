@@ -8,6 +8,9 @@ val LocalApi = compositionLocalOf { ApiClient() }
 
 object AppState {
     val api = ApiClient()
+    var galleryEnabled: Boolean = false
+    var activeSurahId: Int = 1
+    var activeSurahName: String = "Al-Fatiha"
 
     fun isLoggedIn(): Boolean = Session.accessToken != null
 
@@ -17,3 +20,4 @@ object AppState {
         Session.userName = null
     }
 }
+

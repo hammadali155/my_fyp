@@ -24,6 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -50,19 +57,37 @@ fun JFloatingNav(selected: JTab, onSelect: (JTab) -> Unit, modifier: Modifier = 
     ) {
         JTab.values().forEach { tab ->
             val on = tab == selected
-            val tint = if (on) c.onPrimaryContainer else c.onSurfaceVariant
+            val animatedTabBg by animateColorAsState(
+                targetValue = if (on) c.primaryContainer else Color.Transparent,
+                animationSpec = tween(200),
+            )
+            val animatedTint by animateColorAsState(
+                targetValue = if (on) c.onPrimaryContainer else c.onSurfaceVariant,
+                animationSpec = tween(200),
+            )
+            val tabScale by animateFloatAsState(
+                targetValue = if (on) 1.05f else 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
+            )
             Column(
                 Modifier
                     .weight(1f)
                     .height(56.dp)
                     .clip(CapsuleShape)
-                    .background(if (on) c.primaryContainer else Color.Transparent)
-                    .tappable { onSelect(tab) },
+                    .background(animatedTabBg)
+                    .tappable { onSelect(tab) }
+                    .graphicsLayer {
+                        scaleX = tabScale
+                        scaleY = tabScale
+                    },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
             ) {
-                JIcon(tab.icon, size = 22.dp, tint = tint)
-                JText(tab.label, Jawhar.type.labelM, tint)
+                JIcon(tab.icon, size = 22.dp, tint = animatedTint)
+                JText(tab.label, Jawhar.type.labelM, animatedTint)
             }
         }
     }

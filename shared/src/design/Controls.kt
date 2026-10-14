@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,22 +57,34 @@ fun JButton(
     val c = Jawhar.colors
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
-    val colors: Pair<Color, Color> = when (style) {
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (pressed && enabled) 0.96f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+        ),
+    )
+    val targetColors: Pair<Color, Color> = when (style) {
         JButtonStyle.Filled -> Pair(if (pressed) c.onPrimaryContainer else c.primary, c.onPrimary)
         JButtonStyle.Tonal -> Pair(if (pressed) c.outlineVariant else c.primaryContainer, c.onPrimaryContainer)
         JButtonStyle.Neutral -> Pair(if (pressed) c.bgSurfaceHigh else c.bgSurfaceVariant, c.onSurface)
         JButtonStyle.Text -> Pair(if (pressed) c.primarySoft else Color.Transparent, c.primary)
         JButtonStyle.Accent -> Pair(if (pressed) c.accentContainer else c.accent, if (pressed) c.onAccentContainer else c.onAccent)
     }
-    val bg = colors.first
-    val fg = colors.second
-    val finalBg = if (enabled) bg else if (style == JButtonStyle.Text) Color.Transparent else c.onSurface.copy(alpha = 0.12f)
-    val finalFg = if (enabled) fg else c.onSurface.copy(alpha = 0.38f)
+    val animatedBg by androidx.compose.animation.animateColorAsState(
+        targetValue = if (enabled) targetColors.first else if (style == JButtonStyle.Text) Color.Transparent else c.onSurface.copy(alpha = 0.12f),
+        animationSpec = androidx.compose.animation.core.tween(150),
+    )
+    val finalFg = if (enabled) targetColors.second else c.onSurface.copy(alpha = 0.38f)
     Box(
         modifier
             .height(height)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(CapsuleShape)
-            .background(finalBg)
+            .background(animatedBg)
             .clickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center,
@@ -191,18 +204,26 @@ fun JTextField(
 @Composable
 fun JChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = Jawhar.colors
+    val chipBg by androidx.compose.animation.animateColorAsState(
+        if (selected) c.primaryContainer else c.bgSurfaceVariant,
+        androidx.compose.animation.core.tween(180),
+    )
+    val labelColor by androidx.compose.animation.animateColorAsState(
+        if (selected) c.onPrimaryContainer else c.onSurfaceVariant,
+        androidx.compose.animation.core.tween(180),
+    )
     Row(
         modifier
             .height(36.dp)
             .clip(CapsuleShape)
-            .background(if (selected) c.primaryContainer else c.bgSurfaceVariant)
+            .background(chipBg)
             .tappable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        if (selected) JIcon(JI.Check, size = 16.dp, tint = c.onPrimaryContainer, strokeWidth = 2.dp)
-        JText(label, Jawhar.type.labelL, if (selected) c.onPrimaryContainer else c.onSurfaceVariant)
+        if (selected) JIcon(JI.Check, size = 16.dp, tint = labelColor, strokeWidth = 2.dp)
+        JText(label, Jawhar.type.labelL, labelColor)
     }
 }
 

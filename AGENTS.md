@@ -52,7 +52,10 @@ Not done:
 - ~~Frontend still runs on hard-coded sample data; no API client yet~~ — mock UI complete 2026-10-10; `ApiClient` scaffolded and wired to all existing backend endpoints.
 - CAMeL Tools integration, Farasa sidecar, Nahw endpoints, AI Tutor, learning path, gamification, admin/CMS, notifications, Redis caching and rate limiting.
 - Frontend API wiring complete (2026-10-10): `HomeScreen`, `SurahListScreen`, `SearchScreen`, `SarfEngineScreen`, `WordFamilyScreen`, `ConjugationScreen`, `FlashcardScreen`, `VocabularyScreen`, `ProfileScreen`, `BadgesScreen`, `LogInScreen`, `SignUpScreen` all wired to real API via `LocalApi`. `AppState` singleton + `LocalApi` CompositionLocal added in `data/AppState.kt`.
-- Screens still on mock data: `AyahReaderScreen` (needs verse-level navigation with surahId), `HomeLearnScreens` (lesson path not yet backend-backed), `NahwResultScreen` (no nahw parse endpoint yet), `TutorScreens` (AI tutor not yet built).
+- Progressive navigation enabled: Gallery panel hidden behind configurable flag `AppState.galleryEnabled` (default `false`), allowing the app to run in its true progressive user flow (Splash -> Onboarding/Placement/Login -> Main Bottom Tabs: Home, Learn, Quran, Tutor, Profile -> Surah Reader with real API verses).
+- Tactile animations implemented: iOS stack-like push/pop transitions in `ScreenHost` with cubic bezier easing, interactive spring press scaling on `Modifier.tappable` and `JButton`, smooth pill expansion and color transitions on `PageDots`, color/elevation transitions on `JFloatingNav`, animated `JProgressBar` / `JProgressRing`, swipeable `HorizontalPager` onboarding carousel in `WelcomeScreen`, and dedicated non-sliding crossfade tab transitions.
+- Android system back button / gesture handled via expect/actual `SystemBackHandler` in `App.kt`, tracking stack history and falling back to the Home tab before exiting.
+- Screens still on mock data: `HomeLearnScreens` (lesson path not yet backend-backed), `NahwResultScreen` (no nahw parse endpoint yet), `TutorScreens` (AI tutor not yet built).
 
 ## Repository Structure
 

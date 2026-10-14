@@ -6,32 +6,48 @@ import com.meher.jawhar.design.JTab
 
 class JNav(start: String) {
     val stack = mutableStateListOf(start)
+    var isForward: Boolean = true
+        private set
+    var isTabSwitch: Boolean = false
+        private set
 
     val current: String get() = stack.last()
+    val canGoBack: Boolean get() = stack.size > 1
 
     fun go(id: String) {
+        isForward = true
+        isTabSwitch = false
         stack.add(id)
     }
 
     fun back() {
-        if (stack.size > 1) stack.removeAt(stack.lastIndex)
+        if (stack.size > 1) {
+            isForward = false
+            isTabSwitch = false
+            stack.removeAt(stack.lastIndex)
+        }
     }
 
     fun reset(id: String) {
+        isForward = true
+        isTabSwitch = false
         stack.clear()
         stack.add(id)
     }
 
     fun tab(tab: JTab) {
-        reset(
-            when (tab) {
-                JTab.Home -> Dest.Home
-                JTab.Learn -> Dest.Learn
-                JTab.Quran -> Dest.Quran
-                JTab.Tutor -> Dest.TutorStart
-                JTab.Profile -> Dest.Profile
-            },
-        )
+        val target = when (tab) {
+            JTab.Home -> Dest.Home
+            JTab.Learn -> Dest.Learn
+            JTab.Quran -> Dest.Quran
+            JTab.Tutor -> Dest.TutorStart
+            JTab.Profile -> Dest.Profile
+        }
+        if (current == target) return
+        isForward = true
+        isTabSwitch = true
+        stack.clear()
+        stack.add(target)
     }
 }
 
@@ -83,4 +99,6 @@ object Dest {
     const val Appearance = "appearance"
     const val NotifSettings = "notifSettings"
     const val Help = "help"
+
+    val TabDestinations = setOf(Home, Learn, Quran, TutorStart, Profile)
 }

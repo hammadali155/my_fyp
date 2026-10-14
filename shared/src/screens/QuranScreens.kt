@@ -116,7 +116,11 @@ fun SurahListScreen() {
             loadError -> JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load surahs", "Check your connection and pull to retry.")
             else -> surahs.filter { q.isBlank() || it.name_english.contains(q, ignoreCase = true) || it.name_transliteration.contains(q, ignoreCase = true) }.forEach { s ->
                 Row(
-                    Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).tappable { nav.go(Dest.Reader) }.padding(horizontal = 16.dp, vertical = 14.dp),
+                    Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).tappable {
+                        com.meher.jawhar.data.AppState.activeSurahId = s.number
+                        com.meher.jawhar.data.AppState.activeSurahName = s.name_transliteration
+                        nav.go(Dest.Reader)
+                    }.padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
@@ -135,11 +139,31 @@ fun SurahListScreen() {
 @Composable
 fun AyahReaderScreen(showPopup: Boolean = false) {
     val nav = LocalNav.current
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
+    val surahId = com.meher.jawhar.data.AppState.activeSurahId
+    val surahTitle = com.meher.jawhar.data.AppState.activeSurahName
+
     var popup by remember { mutableStateOf(showPopup) }
+    var selectedWord by remember { mutableStateOf<com.meher.jawhar.data.api.WordDto?>(null) }
+    var verses by remember { mutableStateOf<List<com.meher.jawhar.data.api.VerseDto>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(surahId) {
+        loading = true
+        try {
+            val res = api.getVerses(surahId, page = 1, pageSize = 50)
+            verses = res.items
+        } catch (e: Exception) {
+            verses = emptyList()
+        } finally {
+            loading = false
+        }
+    }
+
     Page(
-        title = "Al-Fatiha",
+        title = surahTitle,
         right = JI.More,
         spacing = 28.dp,
         cta = {
@@ -151,14 +175,55 @@ fun AyahReaderScreen(showPopup: Boolean = false) {
                 ) {
                     JIcon(JI.Spark, size = 22.dp, tint = c.primary)
                     JText("Analyse verse", t.labelL, c.onSurface, Modifier.weight(1f))
-                    JText("Ayah 2", t.labelM, c.onSurfaceSubtle)
+                    JText("Ayah 1", t.labelM, c.onSurfaceSubtle)
                 }
                 JFloatingButton(JI.Bookmark, {}, size = 56.dp)
             }
         },
-        overlay = { if (popup) WordSheet(onDismiss = { popup = false }, onSarf = { popup = false; nav.go(Dest.Sarf) }) },
+        overlay = {
+            if (popup) {
+                WordSheet(
+                    onDismiss = { popup = false },
+                    onSarf = {
+                        popup = false
+                        nav.go(Dest.Sarf)
+                    },
+                )
+            }
+        },
     ) {
-        Mock.ayat.forEach { a -> AyahBlock(a, highlight = if (a.number == 2) listOf(2) else emptyList(), onWord = { if (a.number == 2 && it == 2) popup = true }) }
+        if (loading) {
+            repeat(4) {
+                JCard(Modifier.fillMaxWidth(), padding = 16.dp) {
+                    JSkeleton(Modifier.fillMaxWidth(0.3f).height(14.dp))
+                    Spacer(Modifier.height(10.dp))
+                    JSkeleton(Modifier.fillMaxWidth().height(48.dp))
+                    Spacer(Modifier.height(8.dp))
+                    JSkeleton(Modifier.fillMaxWidth(0.7f).height(12.dp))
+                }
+            }
+        } else if (verses.isEmpty()) {
+            Mock.ayat.forEach { a ->
+                AyahBlock(a, highlight = if (a.number == 2) listOf(2) else emptyList(), onWord = { if (a.number == 2 && it == 2) popup = true })
+            }
+        } else {
+            verses.forEach { v ->
+                val wordTexts = if (v.words.isNotEmpty()) v.words.map { it.text_uthmani } else v.text_uthmani.split(" ")
+                AyahBlock(
+                    AyahItem(
+                        number = v.ayah_number,
+                        words = wordTexts,
+                        translit = "Ayah ${v.ayah_number}",
+                        english = v.translation_en ?: "",
+                    ),
+                    highlight = emptyList(),
+                    onWord = { wIdx ->
+                        selectedWord = v.words.getOrNull(wIdx)
+                        popup = true
+                    },
+                )
+            }
+        }
     }
 }
 
