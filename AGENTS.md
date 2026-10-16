@@ -40,11 +40,12 @@ Done and tested:
 - `POST /morphology/conjugate`: past/present/imperative for sound roots only; weak/hamzated/doubled roots return explicit `unsupported_reason`. Built from the existing VERB_FORMS_CATALOG (`fill_pattern` + `IMPERATIVE_PATTERNS`).
 - `GET /morphology/word-family/{root}`: distinct lemmas grouped by pos_tag with counts and one real example verse each; `GET /morphology/patterns`: verb forms catalog + static noun patterns (`app/db/noun_patterns.py`) with example words resolved from the `words` table (null when absent — never invented).
 
-- Frontend screens: `Screens.kt` holds one `ScreenSpec` per **visual state**, and each spec carries a `real` flag. 86 entries total: 46 numbered + 28 state/edge-case + 7 dark-mode + 4 admin + 1 word-popup. `Screens.real` (51) is the app's routable catalog; `Screens.byId` (all 86) is used only when `AppState.galleryEnabled` is true. Never register a *state variant* (error, empty, skeleton, dialog, dark mode) as a routable destination — the host screen renders it from its own state, and the spec stays `real = false` for design review.
+- Frontend screens: `Screens.kt` holds one `ScreenSpec` per **visual state**, and each spec carries a `real` flag. 88 entries total: 48 numbered + 28 state/edge-case + 7 dark-mode + 4 admin + 1 word-popup. `Screens.real` (51) is the app's routable catalog; `Screens.byId` (all 88) is used only when `AppState.galleryEnabled` is true. Never register a *state variant* (error, empty, skeleton, dialog, dark mode) as a routable destination — the host screen renders it from its own state, and the spec stays `real = false` for design review.
 - Lesson flow: one destination (`Dest.Lesson`), same shape as placement. `LessonScreen()` steps through intro → content steps → quiz → complete. Lesson copy lives in `Mock.lessonFormI` (`Lesson` / `LessonStep` / `LessonQ`); `Mock.lessonScore` grades accuracy.
 - Placement assessment: one destination (`Dest.Placement`), not three. `PlacementScreen()` holds a `step` index (0 = intro, 1..n = question, n+1 = result) and an answer list; the three visual steps are `PlacementIntroStep`/`PlacementQuestionStep`/`PlacementResultStep`. Questions live in `Mock.placementQuestions` (a `PlacementQ` per item, tagged with a `skill`); `Mock.placementScore(picks)` grades them per skill. Swapping in a real endpoint means replacing the `Mock` lookup, not the screen.
+- A `Dest.*` entry must render the flow's `XxxScreen()` state machine, never a `XxxStep()` preview — a step preview has no-op callbacks, so its buttons silently do nothing. Gallery previews live under their own string ids with `real = false`.
 - Navigation: `JNav.stack` is a list of `Route(dest, arg)`. `nav.go(Dest.Xxx, arg)` pushes, `nav.reset(Dest.Xxx)` clears the stack (post-auth / logout only), `nav.tab(JTab.Xxx)` switches tabs and sets the crossfade flag. A step *within* one flow is state, not a destination (placement is the reference example). Pass per-screen data via `arg` + `nav.currentArg`, never via a global on `AppState`.
-- Desktop shell shows a gallery sidebar for browsing all 86 screens.
+- Desktop shell shows a gallery sidebar for browsing all 88 screens.
 - Custom design system (`shared/src/design/`): `JawharColors` (light + dark tokens, 7 i'rab role colours), `JawharType` (Arabic + Latin scales), `JI` icon set, `Cards`, `Controls`, `Layout`, `Shapes`, `JLogoMark`, `JStarBadge`, `JArabic` RTL wrapper, `SquircleShape`, `softShadow`, `starOrnaments` canvas helpers.
 - KMP API client (`shared/src/data/api/`): `ApiClient` (Ktor-based, expect/actual per platform), `ApiModels.kt` with serializable DTOs for all backend domains; `Session` object for token storage; `AuthApi` + `authorizedGet/Post` helpers; extension fns for SRS due/review/stats, Quran search, roots, conjugate, word-family, patterns, badges.
 - Health endpoints: `GET /health` (full — DB ping, uptime, version, platform), `GET /health/ready`, `GET /health/live`.
@@ -155,7 +156,7 @@ Backend (run from `backend/`):
 Client (run from repo root, Windows uses `kotlin.bat`):
 - Build: `./kotlin build`
 - Test: `./kotlin test`
-- Run desktop: `./kotlin run -m desktopApp` (opens gallery sidebar for browsing all 86 screens)
+- Run desktop: `./kotlin run -m desktopApp` (opens gallery sidebar for browsing all 88 screens)
 - Hot reload: compose hot-reload is enabled via the `hotReload.runtimeApi` dependency in `shared/module.yaml`
 
 A change is done only when `pytest`, `ruff check` and `mypy app` all pass.
