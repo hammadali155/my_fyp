@@ -480,7 +480,7 @@ fun GetStartedScreen() {
         cta = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 JButton("Sign up with email", { nav.go(Dest.SignUp) })
-                JButton("Continue with Google", { nav.go(Dest.PlacementIntro) }, style = JButtonStyle.Neutral)
+                JButton("Continue with Google", { nav.go(Dest.Placement) }, style = JButtonStyle.Neutral)
                 JButton("I already have an account", { nav.go(Dest.LogIn) }, style = JButtonStyle.Text)
                 JText("By continuing you agree to our Terms and Privacy Policy.", Jawhar.type.bodyS, Jawhar.colors.onSurfaceSubtle, Modifier.fillMaxWidth(), TextAlign.Center)
             }
@@ -534,7 +534,7 @@ fun SignUpScreen(validation: Boolean = false) {
         JButton("Create account", { submit = true },
             enabled = !loading && name.isNotBlank() && email.contains("@") && password.length >= 8 && agreed)
         OrDivider()
-        JButton("Continue with Google", { nav.go(Dest.PlacementIntro) }, style = JButtonStyle.Neutral)
+        JButton("Continue with Google", { nav.go(Dest.Placement) }, style = JButtonStyle.Neutral)
         FooterLink("Already have an account?", "Log in") { nav.go(Dest.LogIn) }
     }
 }
@@ -640,7 +640,7 @@ fun VerifyEmailScreen() {
             },
         )
         JText("Resend code in 0:42", Jawhar.type.labelL, c.onSurfaceVariant, Modifier.fillMaxWidth(), TextAlign.Center)
-        JButton("Verify", { nav.go(Dest.PlacementIntro) }, enabled = code.length == 6)
+        JButton("Verify", { nav.go(Dest.Placement) }, enabled = code.length == 6)
         JButton("Change email", { nav.back() }, style = JButtonStyle.Text)
     }
 }

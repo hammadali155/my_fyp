@@ -29,13 +29,46 @@ import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.LocalNav
 
 @Composable
-fun PlacementIntroScreen() {
+fun PlacementScreen() {
+    val nav = LocalNav.current
+    val qs = Mock.placementQuestions
+    var step by remember { mutableStateOf(0) }
+    var picks by remember { mutableStateOf(List<Int?>(qs.size) { null }) }
+
+    val pick: (Int) -> Unit = { i ->
+        picks = picks.toMutableList().also { it[step - 1] = i }
+    }
+
+    when {
+        step == 0 -> PlacementIntroStep(questions = qs.size, onStart = { step = 1 })
+        step > qs.size -> PlacementResultStep(
+            picks = picks,
+            onBack = { step = qs.size },
+            onBuild = { nav.go(Dest.DailyGoal) },
+        )
+        else -> {
+            val i = step - 1
+            PlacementQuestionStep(
+                q = qs[i],
+                index = i,
+                total = qs.size,
+                picked = picks[i],
+                onPick = pick,
+                onBack = { step -= 1 },
+                onNext = { step += 1 },
+            )
+        }
+    }
+}
+
+@Composable
+internal fun PlacementIntroStep(questions: Int, onStart: () -> Unit) {
     val nav = LocalNav.current
     val c = Jawhar.colors
     Page(
         cta = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                JButton("Start assessment", { nav.go(Dest.PlacementQuestion) })
+                JButton("Start assessment", onStart)
                 JButton("Skip, start from the beginning", { nav.reset(Dest.Home) }, style = JButtonStyle.Text)
             }
         },
@@ -57,61 +90,83 @@ fun PlacementIntroScreen() {
         JListItem("Vocabulary", subtitle = "Words you already know", icon = JI.Cards, trailing = null)
         JListItem("Sarf", subtitle = "How words are built from roots", icon = JI.Tree, trailing = null)
         JListItem("Nahw", subtitle = "How words connect in a sentence", icon = JI.Layers, trailing = null)
-        JText("20 questions · about 6 minutes", Jawhar.type.labelM, c.onSurfaceSubtle, Modifier.fillMaxWidth(), TextAlign.Center)
+        JText("$questions questions · about 6 minutes", Jawhar.type.labelM, c.onSurfaceSubtle, Modifier.fillMaxWidth(), TextAlign.Center)
     }
 }
 
 @Composable
-fun PlacementQuestionScreen() {
-    val nav = LocalNav.current
+internal fun PlacementQuestionStep(
+    q: PlacementQ,
+    index: Int,
+    total: Int,
+    picked: Int?,
+    onPick: (Int) -> Unit,
+    onBack: () -> Unit,
+    onNext: () -> Unit,
+) {
     val c = Jawhar.colors
-    var picked by remember { mutableStateOf(0) }
-    val options = listOf("فَاعِلٌ", "مَفْعُولٌ", "فَعِيلٌ", "فَعَّالٌ")
     Page(
-        backIcon = JI.Close,
-        overlay = { TopProgress(0.35f, "7 / 20") },
-        cta = { JButton("Next", { nav.go(Dest.PlacementResult) }) },
+        backIcon = JI.Back,
+        onBack = onBack,
+        overlay = { TopProgress((index + 1).toFloat() / total, "${index + 1} / $total") },
+        cta = { JButton(if (index + 1 == total) "See my level" else "Next", onNext, enabled = picked != null) },
     ) {
-        JTag("Sarf · Word patterns", background = c.primaryContainer, color = c.onPrimaryContainer)
-        JText("Which pattern is this word?", Jawhar.type.headlineM, c.onSurface)
-        Box(
-            Modifier.fillMaxWidth().height(148.dp).clip(SquircleShape(34.dp)).background(c.bgSurfaceVariant)
-                .starOrnaments(c.primary, StarSpec(171.dp, 74.dp, 220.dp, 0.14f)),
-            contentAlignment = Alignment.Center,
-        ) { JArabic("كَاتِبٌ", Jawhar.type.arabicWordXL, c.onSurface) }
-        options.forEachIndexed { i, o ->
-            JQuizOption(o, listOf("A", "B", "C", "D")[i], if (picked == i) JQuizState.Selected else JQuizState.Default, { picked = i }, arabic = true)
+        JTag("${q.skill}", background = c.primaryContainer, color = c.onPrimaryContainer)
+        JText(q.prompt, Jawhar.type.headlineM, c.onSurface)
+        if (q.word != null) {
+            Box(
+                Modifier.fillMaxWidth().height(148.dp).clip(SquircleShape(34.dp)).background(c.bgSurfaceVariant)
+                    .starOrnaments(c.primary, StarSpec(171.dp, 74.dp, 220.dp, 0.14f)),
+                contentAlignment = Alignment.Center,
+            ) { JArabic(q.word, Jawhar.type.arabicWordXL, c.onSurface) }
+        }
+        q.options.forEachIndexed { i, o ->
+            JQuizOption(o, listOf("A", "B", "C", "D")[i], if (picked == i) JQuizState.Selected else JQuizState.Default, { onPick(i) }, arabic = true)
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PlacementResultScreen() {
-    val nav = LocalNav.current
+internal fun PlacementResultStep(picks: List<Int?>, onBack: () -> Unit, onBuild: () -> Unit) {
     val c = Jawhar.colors
-    Page(back = false, cta = { JButton("Build my learning path", { nav.go(Dest.DailyGoal) }) }) {
+    val t = Jawhar.type
+    val score = Mock.placementScore(picks)
+    val overall = score.values.average().toFloat()
+    val level = when {
+        overall >= 0.85f -> "Advanced"
+        overall >= 0.6f -> "Intermediate"
+        overall >= 0.3f -> "Beginner II"
+        else -> "Beginner I"
+    }
+    val focus = score.entries.sortedBy { it.value }.filter { it.value < overall }.take(2)
+
+    Page(back = false, cta = { JButton("Build my learning path", onBuild) }) {
         HeroCard(stars = listOf(StarSpec(330.dp, 20.dp, 240.dp, 0.28f), StarSpec(300.dp, 150.dp, 160.dp, 0.2f))) {
-            JText("YOUR STARTING LEVEL", Jawhar.type.labelS, c.accent)
-            JText("Beginner II", Jawhar.type.headlineL, c.onPrimary)
+            JText("YOUR STARTING LEVEL", t.labelS, c.accent)
+            JText(level, t.headlineL, c.onPrimary)
             Spacer(Modifier.height(8.dp))
-            JText("Good vocabulary base. Word patterns and grammar need the most work.", Jawhar.type.bodyM, c.onPrimary.copy(alpha = 0.82f), Modifier.padding(end = 70.dp))
+            JText("${(overall * 100).toInt()}% overall. We will start here and build up from there.", t.bodyM, c.onPrimary.copy(alpha = 0.82f), Modifier.padding(end = 70.dp))
         }
         SectionTitle("Your three skills")
-        listOf(Triple("Vocabulary", 0.62f, JI.Cards), Triple("Sarf", 0.35f, JI.Tree), Triple("Nahw", 0.18f, JI.Layers)).forEach { (t, v, ic) ->
+        listOf(Triple("Vocabulary", score["Vocabulary"], JI.Cards), Triple("Sarf", score["Sarf"], JI.Tree), Triple("Nahw", score["Nahw"], JI.Layers)).forEach { (label, v, ic) ->
             JCard(Modifier.fillMaxWidth(), radius = 26.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     JIcon(ic, size = 20.dp, tint = c.primary)
-                    JText(t, Jawhar.type.titleS, c.onSurface, Modifier.weight(1f))
-                    JText("${(v * 100).toInt()}%", Jawhar.type.labelL, c.onSurfaceVariant)
+                    JText(label, t.titleS, c.onSurface, Modifier.weight(1f))
+                    JText("${((v ?: 0f) * 100).toInt()}%", t.labelL, c.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(12.dp))
-                JProgressBar(v, track = c.bgSurfaceHigh)
+                JProgressBar(v ?: 0f, track = c.bgSurfaceHigh)
             }
         }
-        SectionTitle("Focus areas")
+        SectionTitle("Focus areas", "Review answers") { onBack() }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Root identification", "Verb forms", "Case endings").forEach { JChip(it, false, {}) }
+            if (focus.isEmpty()) {
+                JChip("Full syllabus ahead", false, {})
+            } else {
+                focus.forEach { (skill, v) -> JChip("$skill · ${(v * 100).toInt()}%", false, {}) }
+            }
         }
     }
 }

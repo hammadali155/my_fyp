@@ -35,6 +35,7 @@ fun Page(
     onRight: () -> Unit = {},
     back: Boolean = true,
     backIcon: JI = JI.Back,
+    onBack: (() -> Unit)? = null,
     tab: JTab? = null,
     cta: (@Composable () -> Unit)? = null,
     scroll: Boolean = true,
@@ -46,7 +47,7 @@ fun Page(
     val nav = LocalNav.current
     JScreen(
         background = background,
-        onBack = if (back && tab == null) ({ nav.back() }) else null,
+        onBack = onBack ?: if (back && tab == null) ({ nav.back() }) else null,
         backIcon = backIcon,
         rightIcon = right,
         onRight = onRight,
