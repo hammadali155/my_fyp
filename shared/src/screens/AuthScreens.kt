@@ -590,7 +590,7 @@ fun ForgotPasswordScreen() {
         CircleIcon(JI.Lock, Jawhar.colors.primaryContainer, Jawhar.colors.onPrimaryContainer)
         BigTitle("Forgot your password?", "Enter the email you signed up with and we will send a reset link.")
         StatefulField("Email", "", "you@example.com", trailing = JI.Mail)
-        JButton("Send reset link", { nav.go(Dest.LogIn) })
+        JButton("Send reset link", { nav.go(Dest.ResetSent) })
         JButton("Back to log in", { nav.back() }, style = JButtonStyle.Text)
     }
 }

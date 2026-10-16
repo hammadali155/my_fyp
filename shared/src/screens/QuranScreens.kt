@@ -117,9 +117,7 @@ fun SurahListScreen() {
             else -> surahs.filter { q.isBlank() || it.name_english.contains(q, ignoreCase = true) || it.name_transliteration.contains(q, ignoreCase = true) }.forEach { s ->
                 Row(
                     Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).tappable {
-                        com.meher.jawhar.data.AppState.activeSurahId = s.number
-                        com.meher.jawhar.data.AppState.activeSurahName = s.name_transliteration
-                        nav.go(Dest.Reader)
+                        nav.go(Dest.Reader, ReaderTarget(s.number, s.name_transliteration))
                     }.padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -136,14 +134,17 @@ fun SurahListScreen() {
     }
 }
 
+data class ReaderTarget(val surahId: Int, val surahName: String)
+
 @Composable
 fun AyahReaderScreen(showPopup: Boolean = false) {
     val nav = LocalNav.current
     val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
-    val surahId = com.meher.jawhar.data.AppState.activeSurahId
-    val surahTitle = com.meher.jawhar.data.AppState.activeSurahName
+    val target = nav.currentArg as? ReaderTarget
+    val surahId = target?.surahId ?: 1
+    val surahTitle = target?.surahName ?: "Al-Fatiha"
 
     var popup by remember { mutableStateOf(showPopup) }
     var selectedWord by remember { mutableStateOf<com.meher.jawhar.data.api.WordDto?>(null) }

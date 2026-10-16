@@ -27,12 +27,16 @@ import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.JNav
 import com.meher.jawhar.nav.LocalNav
 import com.meher.jawhar.screens.GalleryPanel
+import com.meher.jawhar.screens.ScreenSpec
 import com.meher.jawhar.screens.Screens
 import org.jetbrains.compose.reload.DevelopmentEntryPoint
 
 import com.meher.jawhar.nav.SystemBackHandler
 
 private val AppleEase = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
+
+private val activeCatalog: Map<String, ScreenSpec>
+    get() = if (AppState.galleryEnabled) Screens.byId else Screens.real
 
 @Composable
 @Preview
@@ -86,7 +90,7 @@ private fun ScreenHost(nav: JNav) {
             }
         },
     ) { id ->
-        val spec = Screens.byId[id]
+        val spec = activeCatalog[id]
         if (spec != null) spec.content()
     }
 }
@@ -108,7 +112,7 @@ private fun DesktopShell(nav: JNav, windowHeight: Dp) {
             GalleryPanel(nav, Modifier.width(300.dp).fillMaxHeight())
         }
         Box(Modifier.weight(1f).fillMaxHeight().background(c.bgSurfaceVariant), contentAlignment = Alignment.Center) {
-            val spec = Screens.byId[nav.current]
+            val spec = activeCatalog[nav.current]
             if (spec != null && spec.wide) {
                 Box(Modifier.fillMaxSize()) { ScreenHost(nav) }
             } else {

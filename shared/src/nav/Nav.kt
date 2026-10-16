@@ -4,20 +4,23 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.meher.jawhar.design.JTab
 
+class Route(val dest: String, val arg: Any? = null)
+
 class JNav(start: String) {
-    val stack = mutableStateListOf(start)
+    val stack = mutableStateListOf(Route(start))
     var isForward: Boolean = true
         private set
     var isTabSwitch: Boolean = false
         private set
 
-    val current: String get() = stack.last()
+    val current: String get() = stack.last().dest
+    val currentArg: Any? get() = stack.last().arg
     val canGoBack: Boolean get() = stack.size > 1
 
-    fun go(id: String) {
+    fun go(id: String, arg: Any? = null) {
         isForward = true
         isTabSwitch = false
-        stack.add(id)
+        stack.add(Route(id, arg))
     }
 
     fun back() {
@@ -32,7 +35,7 @@ class JNav(start: String) {
         isForward = true
         isTabSwitch = false
         stack.clear()
-        stack.add(id)
+        stack.add(Route(id))
     }
 
     fun tab(tab: JTab) {
@@ -47,7 +50,7 @@ class JNav(start: String) {
         isForward = true
         isTabSwitch = true
         stack.clear()
-        stack.add(target)
+        stack.add(Route(target))
     }
 }
 
@@ -56,12 +59,11 @@ val LocalNav = staticCompositionLocalOf { JNav(Dest.Splash) }
 object Dest {
     const val Splash = "splash"
     const val Welcome1 = "welcome1"
-    const val Welcome2 = "welcome2"
-    const val Welcome3 = "welcome3"
     const val GetStarted = "getStarted"
     const val SignUp = "signUp"
     const val LogIn = "logIn"
     const val Forgot = "forgot"
+    const val ResetSent = "s_reset_sent"
     const val Verify = "verify"
     const val PlacementIntro = "placementIntro"
     const val PlacementQuestion = "placementQuestion"
@@ -88,7 +90,6 @@ object Dest {
     const val TutorChat = "tutorChat"
     const val TutorHistory = "tutorHistory"
     const val FlashFront = "flashFront"
-    const val FlashBack = "flashBack"
     const val ReviewDone = "reviewDone"
     const val Vocab = "vocab"
     const val Progress = "progress"
