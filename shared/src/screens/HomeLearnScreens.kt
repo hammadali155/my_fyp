@@ -97,7 +97,7 @@ fun HomeScreen() {
             JStatTile(JI.Cards, dueCount.toString(), "Due today", c.infoContainer, c.info, Modifier.weight(1f))
         }
         Row(
-            Modifier.fillMaxWidth().clip(SquircleShape(30.dp)).background(c.bgSurfaceVariant).tappable { nav.go(Dest.LessonIntro) }.padding(20.dp),
+            Modifier.fillMaxWidth().clip(SquircleShape(30.dp)).background(c.bgSurfaceVariant).tappable { nav.go(Dest.Lesson) }.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -169,7 +169,7 @@ fun LearnPathScreen() {
         ) {
             nodes.forEach { (label, state, dx) ->
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-                    JLessonNode(label, state, Modifier.offset(x = dx.dp), onClick = { if (state != JNodeState.Locked) nav.go(Dest.LessonIntro) })
+                    JLessonNode(label, state, Modifier.offset(x = dx.dp), onClick = { if (state != JNodeState.Locked) nav.go(Dest.Lesson) })
                 }
             }
         }
@@ -177,29 +177,71 @@ fun LearnPathScreen() {
 }
 
 @Composable
-fun LessonIntroScreen() {
+fun LessonScreen() {
+    val nav = LocalNav.current
+    val lesson = Mock.lessonFormI
+    var step by remember { mutableStateOf(0) }
+    var picks by remember { mutableStateOf(List<Int?>(lesson.quiz.size) { null }) }
+
+    val contentEnd = lesson.steps.size
+    val doneStep = contentEnd + lesson.quiz.size + 1
+    val pick: (Int) -> Unit = { i -> picks = picks.toMutableList().also { it[step - contentEnd - 1] = i } }
+    val back: () -> Unit = { if (step == 0) nav.back() else step -= 1 }
+
+    when {
+        step == 0 -> LessonIntroStep(lesson, onStart = { step = 1 })
+        step == doneStep -> LessonCompleteStep(
+            lesson = lesson,
+            accuracy = Mock.lessonScore(lesson.quiz, picks),
+            onBack = { step = contentEnd },
+            onContinue = { nav.reset(Dest.Home) },
+            onReview = { nav.go(Dest.FlashFront) },
+        )
+        step > contentEnd -> {
+            val i = step - contentEnd - 1
+            LessonQuizStep(
+                q = lesson.quiz[i],
+                index = i,
+                total = lesson.quiz.size,
+                picked = picks[i],
+                onPick = pick,
+                onBack = back,
+                onNext = { step += 1 },
+            )
+        }
+        else -> LessonContentStep(
+            step = lesson.steps[step - 1],
+            index = step - 1,
+            total = contentEnd,
+            onNext = { step += 1 },
+        )
+    }
+}
+
+@Composable
+internal fun LessonIntroStep(lesson: Lesson, onStart: () -> Unit) {
     val nav = LocalNav.current
     val c = Jawhar.colors
     val t = Jawhar.type
-    Page(right = JI.Bookmark, cta = { JButton("Start lesson", { nav.go(Dest.LessonContent) }) }) {
+    Page(right = JI.Bookmark, cta = { JButton("Start lesson", onStart) }) {
         Box(
             Modifier.fillMaxWidth().height(230.dp).clip(SquircleShape(48.dp)).background(c.accentContainer)
                 .starOrnaments(c.accent, StarSpec(80.dp, 40.dp, 260.dp, 0.35f), StarSpec(320.dp, 220.dp, 200.dp, 0.28f)),
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                JArabic("فَعَلَ", t.arabicWordXL, c.onAccentContainer)
-                JTag("Form I")
+                JArabic(lesson.pattern, t.arabicWordXL, c.onAccentContainer)
+                JTag(lesson.form)
             }
         }
-        BigTitle("Form I: Fa'ala", "The simplest verb pattern, and the base for most Quranic verbs.")
+        BigTitle(lesson.title, lesson.subtitle)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            JTag("8 min", background = c.bgSurfaceVariant, color = c.onSurfaceVariant, icon = JI.Clock)
-            JTag("12 words", background = c.bgSurfaceVariant, color = c.onSurfaceVariant, icon = JI.Cards)
-            JTag("5 questions", background = c.bgSurfaceVariant, color = c.onSurfaceVariant, icon = JI.Help)
+            JTag("${lesson.minutes} min", background = c.bgSurfaceVariant, color = c.onSurfaceVariant, icon = JI.Clock)
+            JTag("${lesson.wordCount} words", background = c.bgSurfaceVariant, color = c.onSurfaceVariant, icon = JI.Cards)
+            JTag("${lesson.quiz.size} questions", background = c.bgSurfaceVariant, color = c.onSurfaceVariant, icon = JI.Help)
         }
         SectionTitle("You will learn")
-        listOf("Build a past tense verb from a root", "Spot Form I in the Quran", "Conjugate for he, she and they").forEach {
+        listOf(lesson.goals).flatten().forEach {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(22.dp).clip(CircleShape).background(c.primaryContainer), contentAlignment = Alignment.Center) { JIcon(JI.Check, size = 12.dp, tint = c.onPrimaryContainer, strokeWidth = 2.4.dp) }
                 JText(it, t.bodyM, c.onSurface)
@@ -209,86 +251,80 @@ fun LessonIntroScreen() {
 }
 
 @Composable
-fun LessonContentScreen() {
-    val nav = LocalNav.current
+internal fun LessonContentStep(step: LessonStep, index: Int, total: Int, onNext: () -> Unit) {
     val c = Jawhar.colors
     val t = Jawhar.type
-    Page(backIcon = JI.Close, overlay = { TopProgress(0.4f, "2 / 5") }, cta = { JButton("Continue", { nav.go(Dest.LessonQuiz) }) }) {
+    Page(backIcon = JI.Close, overlay = { TopProgress((index + 1).toFloat() / total, "${index + 1} / $total") }, cta = { JButton("Continue", onNext) }) {
         Column {
-            JText("CONCEPT", t.labelS, c.primary)
-            JText("The past tense pattern", t.headlineM, c.onSurface)
+            JText(step.kicker, t.labelS, c.primary)
+            JText(step.title, t.headlineM, c.onSurface)
         }
         Column(
             Modifier.fillMaxWidth().clip(SquircleShape(34.dp)).background(c.bgSurfaceVariant).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            JArabic("كَتَبَ", t.arabicWordL, c.onSurface)
-            JText("kataba · he wrote", t.translit, c.onSurfaceVariant)
+            JArabic(step.word ?: "", t.arabicWordL, c.onSurface)
+            JText(step.translit ?: "", t.translit, c.onSurfaceVariant)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                JTag("Root · ك ت ب")
-                JTag("Pattern · فَعَلَ")
+                step.tags.forEach { JTag(it) }
             }
-            JText("Three letters, three fathas", t.labelL, c.onSurfaceVariant, Modifier.padding(top = 8.dp))
         }
-        JText("Put the three root letters on the pattern فَعَلَ. Each letter takes a fatha, which gives you the plain past tense for he.", t.bodyL, c.onSurface)
+        JText(step.body, t.bodyL, c.onSurface)
         JInfoCard("Tip", "Tap any Arabic word in a lesson to see its root, pattern and meaning.", tone = JTone.Accent)
     }
 }
 
 @Composable
-fun LessonQuizScreen() {
-    val nav = LocalNav.current
+internal fun LessonQuizStep(q: LessonQ, index: Int, total: Int, picked: Int?, onPick: (Int) -> Unit, onBack: () -> Unit, onNext: () -> Unit) {
     val c = Jawhar.colors
     val t = Jawhar.type
-    var picked by remember { mutableStateOf<Int?>(null) }
-    val options = listOf("كَاتِبٌ", "مَكْتُوبٌ", "كِتَابٌ", "مَكْتَبٌ")
-    val correct = 0
     Page(
         backIcon = JI.Close,
-        overlay = { TopProgress(0.6f, "3 / 5") },
+        onBack = onBack,
+        overlay = { TopProgress((index + 1).toFloat() / total, "${index + 1} / $total") },
         cta = {
             if (picked == null) {
                 JButton("Check", {}, enabled = false)
             } else {
+                val ok = picked == q.answer
                 Column(
-                    Modifier.fillMaxWidth().clip(SquircleShape(34.dp)).background(if (picked == correct) c.successContainer else c.errorContainer).padding(20.dp),
+                    Modifier.fillMaxWidth().clip(SquircleShape(34.dp)).background(if (ok) c.successContainer else c.errorContainer).padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        JIcon(if (picked == correct) JI.Check else JI.Close, size = 22.dp, tint = if (picked == correct) c.success else c.error, strokeWidth = 2.2.dp)
-                        JText(if (picked == correct) "Correct" else "Not quite", t.titleL, if (picked == correct) c.success else c.error)
+                        JIcon(if (ok) JI.Check else JI.Close, size = 22.dp, tint = if (ok) c.success else c.error, strokeWidth = 2.2.dp)
+                        JText(if (ok) "Correct" else "Not quite", t.titleL, if (ok) c.success else c.error)
                     }
-                    JText("كَاتِبٌ follows the pattern فَاعِلٌ and names the one who does the action: the writer.", t.bodyM, c.onSurface)
-                    JButton("Continue", { nav.go(Dest.LessonComplete) })
+                    JText(q.explain, t.bodyM, c.onSurface)
+                    JButton("Continue", onNext)
                 }
             }
         },
     ) {
-        JText("Which word is the active participle of كَتَبَ?", t.headlineM, c.onSurface)
-        options.forEachIndexed { i, o ->
+        JText(q.prompt, t.headlineM, c.onSurface)
+        q.options.forEachIndexed { i, o ->
             val s = when {
                 picked == null -> JQuizState.Default
-                i == correct -> JQuizState.Correct
+                i == q.answer -> JQuizState.Correct
                 i == picked -> JQuizState.Incorrect
                 else -> JQuizState.Default
             }
-            JQuizOption(o, listOf("A", "B", "C", "D")[i], s, { if (picked == null) picked = i }, arabic = true)
+            JQuizOption(o, listOf("A", "B", "C", "D")[i], s, { if (picked == null) onPick(i) }, arabic = true)
         }
     }
 }
 
 @Composable
-fun LessonCompleteScreen() {
-    val nav = LocalNav.current
+internal fun LessonCompleteStep(lesson: Lesson, accuracy: Float, onBack: () -> Unit, onContinue: () -> Unit, onReview: () -> Unit) {
     val c = Jawhar.colors
     val t = Jawhar.type
     Page(
         back = false,
         cta = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                JButton("Continue", { nav.reset(Dest.Home) })
-                JButton("Review mistakes", { nav.go(Dest.FlashFront) }, style = JButtonStyle.Neutral)
+                JButton("Continue", onContinue)
+                JButton("Review mistakes", onReview, style = JButtonStyle.Neutral)
             }
         },
     ) {
@@ -299,12 +335,12 @@ fun LessonCompleteScreen() {
                 }
             }
         }
-        BigTitle("Lesson complete", "Form I: Fa'ala", center = true)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { JTag("+60 XP", background = c.accentContainer, color = c.onAccentContainer, height = 36.dp) }
+        BigTitle("Lesson complete", lesson.title, center = true)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { JTag("+${lesson.xp} XP", background = c.accentContainer, color = c.onAccentContainer, height = 36.dp) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            JStatTile(JI.Flame, "13", "Day streak", c.accentContainer, c.onAccentContainer, Modifier.weight(1f))
-            JStatTile(JI.Target, "92%", "Accuracy", c.primaryContainer, c.onPrimaryContainer, Modifier.weight(1f))
-            JStatTile(JI.Clock, "7 min", "Time spent", c.infoContainer, c.info, Modifier.weight(1f))
+            JStatTile(JI.Target, "${(accuracy * 100).toInt()}%", "Accuracy", c.primaryContainer, c.onPrimaryContainer, Modifier.weight(1f))
+            JStatTile(JI.Help, lesson.quiz.size.toString(), "Questions", c.accentContainer, c.onAccentContainer, Modifier.weight(1f))
+            JStatTile(JI.Clock, "${lesson.minutes}", "Minutes", c.infoContainer, c.info, Modifier.weight(1f))
         }
     }
 }

@@ -213,7 +213,7 @@ fun DeleteDialogScreen() = SettingsScreen(showDelete = true)
 fun LeaveLessonScreen() {
     val nav = LocalNav.current
     Box(Modifier.fillMaxSize()) {
-        LessonQuizScreen()
+        LessonQuizStep(Mock.lessonFormI.quiz[0], 0, Mock.lessonFormI.quiz.size, null, {}, {}, {})
         JDialog("Leave this lesson?", "Your progress in this lesson will be lost. Completed lessons stay saved.", "Leave", { nav.reset(Dest.Learn) }, {}, cancel = "Keep going", icon = JI.Close)
     }
 }

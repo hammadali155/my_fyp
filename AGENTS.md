@@ -40,7 +40,8 @@ Done and tested:
 - `POST /morphology/conjugate`: past/present/imperative for sound roots only; weak/hamzated/doubled roots return explicit `unsupported_reason`. Built from the existing VERB_FORMS_CATALOG (`fill_pattern` + `IMPERATIVE_PATTERNS`).
 - `GET /morphology/word-family/{root}`: distinct lemmas grouped by pos_tag with counts and one real example verse each; `GET /morphology/patterns`: verb forms catalog + static noun patterns (`app/db/noun_patterns.py`) with example words resolved from the `words` table (null when absent — never invented).
 
-- Frontend screens: `Screens.kt` holds one `ScreenSpec` per **visual state**, and each spec carries a `real` flag. 86 entries total: 46 numbered + 28 state/edge-case + 7 dark-mode + 4 admin + 1 word-popup. `Screens.real` (56) is the app's routable catalog; `Screens.byId` (all 86) is used only when `AppState.galleryEnabled` is true. Never register a *state variant* (error, empty, skeleton, dialog, dark mode) as a routable destination — the host screen renders it from its own state, and the spec stays `real = false` for design review.
+- Frontend screens: `Screens.kt` holds one `ScreenSpec` per **visual state**, and each spec carries a `real` flag. 86 entries total: 46 numbered + 28 state/edge-case + 7 dark-mode + 4 admin + 1 word-popup. `Screens.real` (51) is the app's routable catalog; `Screens.byId` (all 86) is used only when `AppState.galleryEnabled` is true. Never register a *state variant* (error, empty, skeleton, dialog, dark mode) as a routable destination — the host screen renders it from its own state, and the spec stays `real = false` for design review.
+- Lesson flow: one destination (`Dest.Lesson`), same shape as placement. `LessonScreen()` steps through intro → content steps → quiz → complete. Lesson copy lives in `Mock.lessonFormI` (`Lesson` / `LessonStep` / `LessonQ`); `Mock.lessonScore` grades accuracy.
 - Placement assessment: one destination (`Dest.Placement`), not three. `PlacementScreen()` holds a `step` index (0 = intro, 1..n = question, n+1 = result) and an answer list; the three visual steps are `PlacementIntroStep`/`PlacementQuestionStep`/`PlacementResultStep`. Questions live in `Mock.placementQuestions` (a `PlacementQ` per item, tagged with a `skill`); `Mock.placementScore(picks)` grades them per skill. Swapping in a real endpoint means replacing the `Mock` lookup, not the screen.
 - Navigation: `JNav.stack` is a list of `Route(dest, arg)`. `nav.go(Dest.Xxx, arg)` pushes, `nav.reset(Dest.Xxx)` clears the stack (post-auth / logout only), `nav.tab(JTab.Xxx)` switches tabs and sets the crossfade flag. A step *within* one flow is state, not a destination (placement is the reference example). Pass per-screen data via `arg` + `nav.currentArg`, never via a global on `AppState`.
 - Desktop shell shows a gallery sidebar for browsing all 86 screens.
@@ -111,7 +112,7 @@ my_fyp/
 │       │   ├── Mock.kt              # static mock data objects
 │       │   ├── OnboardingScreens.kt # Splash → Placement (1 dest, 3 steps) → DailyGoal → NotifPermission
 │       │   ├── AuthScreens.kt       # SignUp, LogIn, Forgot, Verify, state variants
-│       │   ├── HomeLearnScreens.kt  # Home, LearnPath, Lesson intro/content/quiz/complete,
+│       │   ├── HomeLearnScreens.kt  # Home, LearnPath, Lesson (1 dest, 4 steps),
 │       │   │                        # DailyChallenge
 │       │   ├── QuranScreens.kt      # SurahList, AyahReader, Search
 │       │   ├── SarfNahwScreens.kt   # SarfEngine, WordFamily, Conjugation, NahwInput/Result
