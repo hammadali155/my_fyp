@@ -33,6 +33,7 @@ fun PlacementScreen() {
     val nav = LocalNav.current
     val qs = Mock.placementQuestions
     var step by remember { mutableStateOf(0) }
+    var reviewing by remember { mutableStateOf(false) }
     var picks by remember { mutableStateOf(List<Int?>(qs.size) { null }) }
 
     val pick: (Int) -> Unit = { i ->
@@ -43,7 +44,7 @@ fun PlacementScreen() {
         step == 0 -> PlacementIntroStep(questions = qs.size, onStart = { step = 1 })
         step > qs.size -> PlacementResultStep(
             picks = picks,
-            onBack = { step = qs.size },
+            onReview = { reviewing = true; step = 1 },
             onBuild = { nav.go(Dest.DailyGoal) },
         )
         else -> {
@@ -53,8 +54,11 @@ fun PlacementScreen() {
                 index = i,
                 total = qs.size,
                 picked = picks[i],
+                reviewing = reviewing,
                 onPick = pick,
-                onBack = { step -= 1 },
+                onBack = {
+                    if (reviewing && step == 1) { reviewing = false; step = qs.size + 1 } else step -= 1
+                },
                 onNext = { step += 1 },
             )
         }
@@ -100,35 +104,63 @@ internal fun PlacementQuestionStep(
     index: Int,
     total: Int,
     picked: Int?,
+    reviewing: Boolean = false,
     onPick: (Int) -> Unit,
     onBack: () -> Unit,
     onNext: () -> Unit,
 ) {
     val c = Jawhar.colors
+    val t = Jawhar.type
+    val answered = picked != null
+    val right = answered && picked == q.answer
     Page(
         backIcon = JI.Back,
         onBack = onBack,
         overlay = { TopProgress((index + 1).toFloat() / total, "${index + 1} / $total") },
-        cta = { JButton(if (index + 1 == total) "See my level" else "Next", onNext, enabled = picked != null) },
+        cta = {
+            JButton(
+                when {
+                    index + 1 != total -> "Next"
+                    reviewing -> "Back to my results"
+                    else -> "See my level"
+                },
+                onNext,
+                enabled = answered || reviewing,
+            )
+        },
     ) {
         JTag("${q.skill}", background = c.primaryContainer, color = c.onPrimaryContainer)
-        JText(q.prompt, Jawhar.type.headlineM, c.onSurface)
+        JText(q.prompt, t.headlineM, c.onSurface)
         if (q.word != null) {
             Box(
                 Modifier.fillMaxWidth().height(148.dp).clip(SquircleShape(34.dp)).background(c.bgSurfaceVariant)
                     .starOrnaments(c.primary, StarSpec(171.dp, 74.dp, 220.dp, 0.14f)),
                 contentAlignment = Alignment.Center,
-            ) { JArabic(q.word, Jawhar.type.arabicWordXL, c.onSurface) }
+            ) { JArabic(q.word, t.arabicWordXL, c.onSurface) }
+        }
+        if (reviewing && answered) {
+            JBanner(
+                if (right) JBannerKind.Success else JBannerKind.Error,
+                if (right) "Correct" else "Not quite",
+                if (right) "You chose the right answer."
+                else "The right answer is ${q.options[q.answer]}.",
+            )
         }
         q.options.forEachIndexed { i, o ->
-            JQuizOption(o, listOf("A", "B", "C", "D")[i], if (picked == i) JQuizState.Selected else JQuizState.Default, { onPick(i) }, arabic = true)
+            val s = when {
+                reviewing && answered && i == q.answer -> JQuizState.Correct
+                reviewing && answered && i == picked -> JQuizState.Incorrect
+                picked == i -> JQuizState.Selected
+                else -> JQuizState.Default
+            }
+            JQuizOption(o, listOf("A", "B", "C", "D")[i], s, { onPick(i) }, arabic = true)
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun PlacementResultStep(picks: List<Int?>, onBack: () -> Unit, onBuild: () -> Unit) {
+internal fun PlacementResultStep(picks: List<Int?>, onReview: () -> Unit, onBuild: () -> Unit) {
     val c = Jawhar.colors
     val t = Jawhar.type
     val score = Mock.placementScore(picks)
@@ -160,7 +192,7 @@ internal fun PlacementResultStep(picks: List<Int?>, onBack: () -> Unit, onBuild:
                 JProgressBar(v ?: 0f, track = c.bgSurfaceHigh)
             }
         }
-        SectionTitle("Focus areas", "Review answers") { onBack() }
+        SectionTitle("Focus areas", "Review answers") { onReview() }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (focus.isEmpty()) {
                 JChip("Full syllabus ahead", false, {})

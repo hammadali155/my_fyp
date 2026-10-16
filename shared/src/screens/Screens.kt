@@ -29,7 +29,7 @@ object Screens {
         ScreenSpec(Dest.Verify, "1 · Onboarding and auth", "09 Verify email") { VerifyEmailScreen() },
         ScreenSpec(Dest.Placement, "1 · Onboarding and auth", "10 Placement test") { PlacementScreen() },
         ScreenSpec("placementIntro", "1 · Onboarding and auth", "11 Placement: intro", real = false) { PlacementIntroStep(Mock.placementQuestions.size, {}) },
-        ScreenSpec("placementQuestion", "1 · Onboarding and auth", "12 Placement: question", real = false) { PlacementQuestionStep(Mock.placementQuestions[0], 0, Mock.placementQuestions.size, null, {}, {}, {}) },
+        ScreenSpec("placementQuestion", "1 · Onboarding and auth", "12 Placement: question", real = false) { PlacementQuestionStep(q = Mock.placementQuestions[0], index = 0, total = Mock.placementQuestions.size, picked = null, reviewing = true, onPick = {}, onBack = {}, onNext = {}) },
         ScreenSpec("placementResult", "1 · Onboarding and auth", "13 Placement: result", real = false) { PlacementResultStep(List<Int?>(Mock.placementQuestions.size) { null }, {}, {}) },
         ScreenSpec(Dest.DailyGoal, "1 · Onboarding and auth", "13 Daily goal") { DailyGoalScreen() },
         ScreenSpec(Dest.NotifPermission, "1 · Onboarding and auth", "14 Notification permission") { NotificationPermissionScreen() },
