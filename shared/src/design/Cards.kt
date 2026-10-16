@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -140,8 +139,8 @@ fun JQuizOption(
         JQuizState.Correct -> c.success
         JQuizState.Incorrect -> c.error
     }
-    val fill by androidx.compose.animation.animateColorAsState(targetFill, androidx.compose.animation.core.tween(200))
-    val accent by androidx.compose.animation.animateColorAsState(targetAccent, androidx.compose.animation.core.tween(200))
+    val fill by androidx.compose.animation.animateColorAsState(targetFill, motion(JawharMotion.effectsDefault<Color>()))
+    val accent by androidx.compose.animation.animateColorAsState(targetAccent, motion(JawharMotion.effectsDefault<Color>()))
 
     Row(
         modifier
@@ -315,7 +314,7 @@ fun JBadgeTile(title: String, caption: String, unlocked: Boolean, modifier: Modi
 fun JProgressBar(progress: Float, modifier: Modifier = Modifier.fillMaxWidth(), height: Dp = 8.dp, track: Color = Jawhar.colors.outlineVariant, fill: Color = Jawhar.colors.primary) {
     val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        animationSpec = motion(JawharMotion.spatialDefault<Float>()),
     )
     Box(modifier.height(height).clip(CapsuleShape).background(track)) {
         Box(Modifier.fillMaxHeight().fillMaxWidth(animatedProgress).clip(CapsuleShape).background(fill))
@@ -327,7 +326,7 @@ fun JProgressRing(progress: Float, modifier: Modifier = Modifier, size: Dp = 168
     val c = Jawhar.colors
     val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = androidx.compose.animation.core.tween(800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        animationSpec = motion(JawharMotion.spatialSlow<Float>()),
     )
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(size)) {

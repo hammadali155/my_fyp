@@ -148,7 +148,7 @@ fun WelcomeScreen(page: Int = 0) {
     }
     val animatedCardBg by androidx.compose.animation.animateColorAsState(
         targetValue = targetTone,
-        animationSpec = tween(380, easing = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)),
+        animationSpec = motion(JawharMotion.effectsDefault<androidx.compose.ui.graphics.Color>()),
         label = "card_bg",
     )
     val targetStar = when (currentPage) {
@@ -158,7 +158,7 @@ fun WelcomeScreen(page: Int = 0) {
     }
     val animatedStar by androidx.compose.animation.animateColorAsState(
         targetValue = targetStar,
-        animationSpec = tween(380, easing = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)),
+        animationSpec = motion(JawharMotion.effectsDefault<androidx.compose.ui.graphics.Color>()),
         label = "star_tint",
     )
 
@@ -175,13 +175,13 @@ fun WelcomeScreen(page: Int = 0) {
 
     val skipAlpha by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isLast) 0f else 1f,
-        animationSpec = tween(260, easing = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)),
+        animationSpec = motion(JawharMotion.effectsDefault<Float>()),
         label = "skip_alpha",
     )
 
     val backWeight by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isFirst || isLast) 0f else 1f,
-        animationSpec = tween(320, easing = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)),
+        animationSpec = motion(JawharMotion.spatialDefault<Float>()),
         label = "back_weight",
     )
 
@@ -295,8 +295,8 @@ fun WelcomeScreen(page: Int = 0) {
             AnimatedContent(
                 targetState = currentPage,
                 transitionSpec = {
-                    (fadeIn(tween(220)) + slideInVertically(tween(220)) { h -> h / 3 }) togetherWith
-                        (fadeOut(tween(160)) + slideOutVertically(tween(160)) { h -> -h / 3 })
+                    (fadeIn(motion(JawharMotion.effectsDefault<Float>())) + slideInVertically(motion(JawharMotion.spatialDefault())) { h -> h / 3 }) togetherWith
+                        (fadeOut(motion(JawharMotion.effectsFast<Float>())) + slideOutVertically(motion(JawharMotion.spatialFast())) { h -> -h / 3 })
                 },
                 label = "welcome_title",
             ) { idx ->
@@ -310,8 +310,8 @@ fun WelcomeScreen(page: Int = 0) {
             AnimatedContent(
                 targetState = currentPage,
                 transitionSpec = {
-                    (fadeIn(tween(220)) + slideInVertically(tween(220)) { h -> h / 3 }) togetherWith
-                        (fadeOut(tween(160)) + slideOutVertically(tween(160)) { h -> -h / 3 })
+                    (fadeIn(motion(JawharMotion.effectsDefault<Float>())) + slideInVertically(motion(JawharMotion.spatialDefault())) { h -> h / 3 }) togetherWith
+                        (fadeOut(motion(JawharMotion.effectsFast<Float>())) + slideOutVertically(motion(JawharMotion.spatialFast())) { h -> -h / 3 })
                 },
                 label = "welcome_body",
             ) { idx ->

@@ -2,7 +2,6 @@ package com.meher.jawhar
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -34,8 +33,6 @@ import com.meher.jawhar.screens.Screens
 import org.jetbrains.compose.reload.DevelopmentEntryPoint
 
 import com.meher.jawhar.nav.SystemBackHandler
-
-private val AppleEase = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
 
 private val activeCatalog: Map<String, ScreenSpec>
     get() = if (AppState.galleryEnabled) Screens.byId else Screens.real
@@ -75,20 +72,20 @@ private fun ScreenHost(nav: JNav) {
         transitionSpec = {
             val isTab = nav.isTabSwitch || (initialState in Dest.TabDestinations && targetState in Dest.TabDestinations)
             if (isTab) {
-                fadeIn(animationSpec = tween(180)) togetherWith
-                    fadeOut(animationSpec = tween(140))
+                fadeIn(animationSpec = motion(JawharMotion.effectsDefault())) togetherWith
+                    fadeOut(animationSpec = motion(JawharMotion.effectsFast()))
             } else {
                 val forward = nav.isForward
                 if (forward) {
-                    (slideInHorizontally(animationSpec = tween(320, easing = AppleEase)) { fullWidth -> fullWidth / 4 } +
-                        fadeIn(animationSpec = tween(280, easing = AppleEase))) togetherWith
-                        (slideOutHorizontally(animationSpec = tween(300, easing = AppleEase)) { fullWidth -> -fullWidth / 6 } +
-                        fadeOut(animationSpec = tween(240, easing = AppleEase)))
+                    (slideInHorizontally(animationSpec = motion(JawharMotion.spatialDefault())) { fullWidth -> fullWidth / 4 } +
+                        fadeIn(animationSpec = motion(JawharMotion.effectsDefault()))) togetherWith
+                        (slideOutHorizontally(animationSpec = motion(JawharMotion.spatialFast())) { fullWidth -> -fullWidth / 6 } +
+                        fadeOut(animationSpec = motion(JawharMotion.effectsFast())))
                 } else {
-                    (slideInHorizontally(animationSpec = tween(320, easing = AppleEase)) { fullWidth -> -fullWidth / 6 } +
-                        fadeIn(animationSpec = tween(280, easing = AppleEase))) togetherWith
-                        (slideOutHorizontally(animationSpec = tween(300, easing = AppleEase)) { fullWidth -> fullWidth / 4 } +
-                        fadeOut(animationSpec = tween(240, easing = AppleEase)))
+                    (slideInHorizontally(animationSpec = motion(JawharMotion.spatialDefault())) { fullWidth -> -fullWidth / 6 } +
+                        fadeIn(animationSpec = motion(JawharMotion.effectsDefault()))) togetherWith
+                        (slideOutHorizontally(animationSpec = motion(JawharMotion.spatialFast())) { fullWidth -> fullWidth / 4 } +
+                        fadeOut(animationSpec = motion(JawharMotion.effectsFast())))
                 }
             }
         },

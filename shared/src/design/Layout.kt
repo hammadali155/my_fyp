@@ -24,7 +24,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -59,11 +64,11 @@ fun JFloatingNav(selected: JTab, onSelect: (JTab) -> Unit, modifier: Modifier = 
             val on = tab == selected
             val animatedTabBg by animateColorAsState(
                 targetValue = if (on) c.primaryContainer else Color.Transparent,
-                animationSpec = tween(200),
+                animationSpec = motion(JawharMotion.effectsDefault()),
             )
             val animatedTint by animateColorAsState(
                 targetValue = if (on) c.onPrimaryContainer else c.onSurfaceVariant,
-                animationSpec = tween(200),
+                animationSpec = motion(JawharMotion.effectsDefault()),
             )
             val tabScale by animateFloatAsState(
                 targetValue = if (on) 1.05f else 1f,
@@ -146,24 +151,39 @@ fun JDialog(
 fun JBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    visible: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = Jawhar.colors
     Box(modifier.fillMaxSize()) {
-        JScrim(onDismiss)
-        Column(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .softShadow(SquircleTop(48.dp), 24.dp, 0.4f)
-                .clip(SquircleTop(48.dp))
-                .background(c.bgSurface)
-                .padding(start = 24.dp, end = 24.dp, top = 10.dp, bottom = 24.dp + LocalBottomInset.current),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(animationSpec = motion(JawharMotion.effectsDefault())),
+            exit = fadeOut(animationSpec = motion(JawharMotion.effectsFast())),
         ) {
-            Box(Modifier.size(40.dp, 5.dp).clip(CapsuleShape).background(c.outline))
-            content()
+            JScrim(onDismiss)
+        }
+        AnimatedVisibility(
+            visible = visible,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = slideInVertically(animationSpec = motion(JawharMotion.spatialSlow())) { h -> h } +
+                fadeIn(animationSpec = motion(JawharMotion.effectsDefault())),
+            exit = slideOutVertically(animationSpec = motion(JawharMotion.spatialFast())) { h -> h } +
+                fadeOut(animationSpec = motion(JawharMotion.effectsFast())),
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .softShadow(SquircleTop(48.dp), 24.dp, 0.4f)
+                    .clip(SquircleTop(48.dp))
+                    .background(c.bgSurface)
+                    .padding(start = 24.dp, end = 24.dp, top = 10.dp, bottom = 24.dp + LocalBottomInset.current),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Box(Modifier.size(40.dp, 5.dp).clip(CapsuleShape).background(c.outline))
+                content()
+            }
         }
     }
 }

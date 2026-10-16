@@ -161,7 +161,7 @@ fun PageDots(count: Int, active: Int, modifier: Modifier = Modifier) {
             )
             val c by androidx.compose.animation.animateColorAsState(
                 if (i == active) Jawhar.colors.primary else Jawhar.colors.outline,
-                androidx.compose.animation.core.tween(200),
+                motion(JawharMotion.effectsDefault<androidx.compose.ui.graphics.Color>()),
             )
             Box(
                 Modifier

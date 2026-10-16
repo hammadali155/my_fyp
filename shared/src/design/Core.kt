@@ -52,7 +52,7 @@ fun Modifier.tappable(enabled: Boolean = true, onClick: () -> Unit): Modifier {
     val pressed by source.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (pressed && enabled) 0.965f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+        animationSpec = motion(JawharMotion.spatialFast<Float>()),
     )
     return this
         .graphicsLayer {

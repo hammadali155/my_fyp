@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -48,6 +47,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 
 enum class JButtonStyle { Filled, Tonal, Neutral, Text, Accent }
@@ -65,23 +65,25 @@ fun JButton(
     val c = Jawhar.colors
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
+    val active = pressed && enabled
     val scale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.96f else 1f,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
-        ),
+        targetValue = if (active) 0.96f else 1f,
+        animationSpec = motion(JawharMotion.spatialFast<Float>()),
+    )
+    val corner by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (active) 14.dp else height / 2,
+        animationSpec = motion(JawharMotion.spatialDefault<Dp>()),
     )
     val targetColors: Pair<Color, Color> = when (style) {
-        JButtonStyle.Filled -> Pair(if (pressed) c.onPrimaryContainer else c.primary, c.onPrimary)
-        JButtonStyle.Tonal -> Pair(if (pressed) c.outlineVariant else c.primaryContainer, c.onPrimaryContainer)
-        JButtonStyle.Neutral -> Pair(if (pressed) c.bgSurfaceHigh else c.bgSurfaceVariant, c.onSurface)
-        JButtonStyle.Text -> Pair(if (pressed) c.primarySoft else Color.Transparent, c.primary)
-        JButtonStyle.Accent -> Pair(if (pressed) c.accentContainer else c.accent, if (pressed) c.onAccentContainer else c.onAccent)
+        JButtonStyle.Filled -> Pair(if (active) c.onPrimaryContainer else c.primary, c.onPrimary)
+        JButtonStyle.Tonal -> Pair(if (active) c.outlineVariant else c.primaryContainer, c.onPrimaryContainer)
+        JButtonStyle.Neutral -> Pair(if (active) c.bgSurfaceHigh else c.bgSurfaceVariant, c.onSurface)
+        JButtonStyle.Text -> Pair(if (active) c.primarySoft else Color.Transparent, c.primary)
+        JButtonStyle.Accent -> Pair(if (active) c.accentContainer else c.accent, if (active) c.onAccentContainer else c.onAccent)
     }
     val animatedBg by androidx.compose.animation.animateColorAsState(
         targetValue = if (enabled) targetColors.first else if (style == JButtonStyle.Text) Color.Transparent else c.onSurface.copy(alpha = 0.12f),
-        animationSpec = androidx.compose.animation.core.tween(150),
+        animationSpec = motion(JawharMotion.effectsDefault<Color>()),
     )
     val finalFg = if (enabled) targetColors.second else c.onSurface.copy(alpha = 0.38f)
     Box(
@@ -91,7 +93,7 @@ fun JButton(
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(CapsuleShape)
+            .clip(SquircleShape(corner))
             .background(animatedBg)
             .clickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 24.dp),
@@ -103,11 +105,11 @@ fun JButton(
                 targetState = text,
                 transitionSpec = {
                     (androidx.compose.animation.slideInVertically(
-                        animationSpec = androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
-                    ) { h -> h / 2 } + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(200))) togetherWith
+                        animationSpec = motion(JawharMotion.spatialDefault<IntOffset>())
+                    ) { h -> h / 2 } + androidx.compose.animation.fadeIn(animationSpec = motion(JawharMotion.effectsDefault<Float>()))) togetherWith
                         (androidx.compose.animation.slideOutVertically(
-                            animationSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
-                        ) { h -> -h / 2 } + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(160)))
+                            animationSpec = motion(JawharMotion.spatialFast<IntOffset>())
+                        ) { h -> -h / 2 } + androidx.compose.animation.fadeOut(animationSpec = motion(JawharMotion.effectsFast<Float>())))
                 },
                 label = "button_label_anim",
             ) { targetText ->
@@ -126,11 +128,17 @@ fun JFloatingButton(
     size: Dp = 48.dp,
 ) {
     val c = Jawhar.colors
+    val pressed = remember { MutableInteractionSource() }.collectIsPressedAsState()
+    val corner by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (pressed.value) size / 4 else size / 2,
+        animationSpec = motion(JawharMotion.spatialDefault<Dp>()),
+    )
+    val shape = SquircleShape(corner)
     Box(
         modifier
             .size(size)
-            .softShadow(CircleShape, 14.dp, 0.3f)
-            .clip(CircleShape)
+            .softShadow(shape, 14.dp, 0.3f)
+            .clip(shape)
             .background(if (filled) c.primary else c.bgSurface.copy(alpha = 0.92f))
             .tappable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -227,11 +235,11 @@ fun JChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modif
     val c = Jawhar.colors
     val chipBg by androidx.compose.animation.animateColorAsState(
         if (selected) c.primaryContainer else c.bgSurfaceVariant,
-        androidx.compose.animation.core.tween(180),
+        motion(JawharMotion.effectsDefault<Color>()),
     )
     val labelColor by androidx.compose.animation.animateColorAsState(
         if (selected) c.onPrimaryContainer else c.onSurfaceVariant,
-        androidx.compose.animation.core.tween(180),
+        motion(JawharMotion.effectsDefault<Color>()),
     )
     Row(
         modifier

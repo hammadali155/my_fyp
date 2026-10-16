@@ -182,16 +182,15 @@ fun AyahReaderScreen(showPopup: Boolean = false) {
             }
         },
         overlay = {
-            if (st.popup) {
-                WordSheet(
-                    word = st.selectedWord,
-                    onDismiss = { st.popup = false },
-                    onSarf = {
-                        st.popup = false
-                        nav.go(Dest.Sarf)
-                    },
-                )
-            }
+            WordSheet(
+                word = st.selectedWord,
+                visible = st.popup,
+                onDismiss = { st.popup = false },
+                onSarf = {
+                    st.popup = false
+                    nav.go(Dest.Sarf)
+                },
+            )
         },
     ) {
         when {
@@ -232,10 +231,10 @@ fun AyahReaderScreen(showPopup: Boolean = false) {
 }
 
 @Composable
-fun WordSheet(word: com.meher.jawhar.data.api.WordDto?, onDismiss: () -> Unit, onSarf: () -> Unit) {
+fun WordSheet(word: com.meher.jawhar.data.api.WordDto?, visible: Boolean, onDismiss: () -> Unit, onSarf: () -> Unit) {
     val c = Jawhar.colors
     val t = Jawhar.type
-    JBottomSheet(onDismiss) {
+    JBottomSheet(onDismiss, visible = visible) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 JText(word?.translation_en ?: "Tap a word to inspect it", t.titleL, c.onSurface)
