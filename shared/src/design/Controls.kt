@@ -1,6 +1,14 @@
 package com.meher.jawhar.design
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -91,7 +99,20 @@ fun JButton(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (icon != null) JIcon(icon, size = 20.dp, tint = finalFg)
-            JText(text, Jawhar.type.labelL, finalFg, textAlign = TextAlign.Center)
+            androidx.compose.animation.AnimatedContent(
+                targetState = text,
+                transitionSpec = {
+                    (androidx.compose.animation.slideInVertically(
+                        animationSpec = androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
+                    ) { h -> h / 2 } + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(200))) togetherWith
+                        (androidx.compose.animation.slideOutVertically(
+                            animationSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
+                        ) { h -> -h / 2 } + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(160)))
+                },
+                label = "button_label_anim",
+            ) { targetText ->
+                JText(targetText, Jawhar.type.labelL, finalFg, textAlign = TextAlign.Center)
+            }
         }
     }
 }
