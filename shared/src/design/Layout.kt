@@ -181,6 +181,7 @@ fun JScreen(
     onTab: (JTab) -> Unit = {},
     cta: (@Composable () -> Unit)? = null,
     scroll: Boolean = true,
+    scrollState: androidx.compose.foundation.ScrollState? = null,
     spacing: Dp = 16.dp,
     topSpace: Dp = 68.dp,
     horizontalPadding: Dp = 24.dp,
@@ -193,7 +194,7 @@ fun JScreen(
     Box(modifier.fillMaxSize().background(background)) {
         val base = Modifier.fillMaxSize()
         Column(
-            (if (scroll) base.verticalScroll(rememberScrollState()) else base).padding(horizontal = horizontalPadding),
+            (if (scroll) base.verticalScroll(scrollState ?: rememberScrollState()) else base).padding(horizontal = horizontalPadding),
             verticalArrangement = Arrangement.spacedBy(spacing),
         ) {
             Spacer(Modifier.height((top + topSpace - spacing).coerceAtLeast(0.dp)))

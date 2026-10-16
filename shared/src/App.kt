@@ -26,6 +26,8 @@ import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.JNav
 import com.meher.jawhar.nav.LocalNav
+import com.meher.jawhar.nav.LocalSession
+import com.meher.jawhar.nav.ScreenSession
 import com.meher.jawhar.screens.GalleryPanel
 import com.meher.jawhar.screens.ScreenSpec
 import com.meher.jawhar.screens.Screens
@@ -44,6 +46,7 @@ private val activeCatalog: Map<String, ScreenSpec>
 fun App() {
     JawharTheme {
         val nav = remember { JNav(Dest.Splash) }
+        val session = remember { ScreenSession() }
         val canHandleBack = nav.canGoBack || (nav.current in Dest.TabDestinations && nav.current != Dest.Home)
         SystemBackHandler(enabled = canHandleBack) {
             if (nav.canGoBack) {
@@ -52,7 +55,7 @@ fun App() {
                 nav.tab(JTab.Home)
             }
         }
-        CompositionLocalProvider(LocalNav provides nav, LocalApi provides AppState.api) {
+        CompositionLocalProvider(LocalNav provides nav, LocalSession provides session, LocalApi provides AppState.api) {
             BoxWithConstraints(Modifier.fillMaxSize().background(Jawhar.colors.bgBase)) {
                 if (maxWidth > 760.dp && maxHeight > 560.dp) {
                     DesktopShell(nav, maxHeight)

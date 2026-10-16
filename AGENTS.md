@@ -44,6 +44,7 @@ Done and tested:
 - Lesson flow: one destination (`Dest.Lesson`), same shape as placement. `LessonScreen()` steps through intro → content steps → quiz → complete. Lesson copy lives in `Mock.lessonFormI` (`Lesson` / `LessonStep` / `LessonQ`); `Mock.lessonScore` grades accuracy.
 - Placement assessment: one destination (`Dest.Placement`), not three. `PlacementScreen()` holds a `step` index (0 = intro, 1..n = question, n+1 = result) and an answer list; the three visual steps are `PlacementIntroStep`/`PlacementQuestionStep`/`PlacementResultStep`. Questions live in `Mock.placementQuestions` (a `PlacementQ` per item, tagged with a `skill`); `Mock.placementScore(picks)` grades them per skill. The result step's "Review answers" action sets `reviewing = true` and returns to question 1, where each question shows its correct/incorrect state; stepping past the last question returns to the result. Swapping in a real endpoint means replacing the `Mock` lookup, not the screen.
 - A `Dest.*` entry must render the flow's `XxxScreen()` state machine, never a `XxxStep()` preview — a step preview has no-op callbacks, so its buttons silently do nothing. Gallery previews live under their own string ids with `real = false`.
+- Screen state that must outlive its composable lives in `nav/RouteState.kt`: `ScreenSession` (provided as `LocalSession`, remembered once in `App()` next to `JNav`) holds a `ReaderState` (ayah reader: surah, verses, scroll, selected word, popup) and a `ReviewState` (flashcard queue, index, reveal). Plain `remember` is disposed the moment a screen leaves the composition, so it does not survive navigation. New long-lived screens add a field to `ScreenSession`, not a global on `AppState`.
 - Navigation: `JNav.stack` is a list of `Route(dest, arg)`. `nav.go(Dest.Xxx, arg)` pushes, `nav.reset(Dest.Xxx)` clears the stack (post-auth / logout only), `nav.tab(JTab.Xxx)` switches tabs and sets the crossfade flag. A step *within* one flow is state, not a destination (placement is the reference example). Pass per-screen data via `arg` + `nav.currentArg`, never via a global on `AppState`.
 - Desktop shell shows a gallery sidebar for browsing all 88 screens.
 - Custom design system (`shared/src/design/`): `JawharColors` (light + dark tokens, 7 i'rab role colours), `JawharType` (Arabic + Latin scales), `JI` icon set, `Cards`, `Controls`, `Layout`, `Shapes`, `JLogoMark`, `JStarBadge`, `JArabic` RTL wrapper, `SquircleShape`, `softShadow`, `starOrnaments` canvas helpers.
@@ -106,7 +107,8 @@ my_fyp/
 │       │   ├── Layout.kt            # scaffold, tab bar, section labels
 │       │   └── Shapes.kt            # SquircleShape + helpers
 │       ├── nav/
-│       │   └── Nav.kt               # JNav Route(dest, arg) stack, Dest constants, LocalNav
+│       │   ├── Nav.kt               # JNav Route(dest, arg) stack, Dest constants, LocalNav
+│       │   └── RouteState.kt        # ScreenSession/LocalSession, ReaderState, ReviewState
 │       ├── screens/
 │       │   ├── Screens.kt           # ScreenSpec registry (86 entries; Screens.real = 56 routable)
 │       │   ├── Gallery.kt           # desktop sidebar gallery panel
