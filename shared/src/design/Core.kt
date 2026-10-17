@@ -50,15 +50,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 fun Modifier.tappable(enabled: Boolean = true, onClick: () -> Unit): Modifier {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.965f else 1f,
-        animationSpec = motion(JawharMotion.spatialFast<Float>()),
+    val alpha by animateFloatAsState(
+        targetValue = if (pressed && enabled) 0.9f else 1f,
+        animationSpec = motion(JawharMotion.effectsDefault<Float>()),
     )
     return this
-        .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
+        .graphicsLayer { this.alpha = alpha }
         .clickable(
             interactionSource = source,
             indication = null,

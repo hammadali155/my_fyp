@@ -66,10 +66,6 @@ fun JButton(
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val active = pressed && enabled
-    val scale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (active) 0.96f else 1f,
-        animationSpec = motion(JawharMotion.spatialFast<Float>()),
-    )
     val corner by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (active) 14.dp else height / 2,
         animationSpec = motion(JawharMotion.spatialDefault<Dp>()),
@@ -89,10 +85,6 @@ fun JButton(
     Box(
         modifier
             .height(height)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
             .clip(SquircleShape(corner))
             .background(animatedBg)
             .clickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick)
@@ -128,9 +120,10 @@ fun JFloatingButton(
     size: Dp = 48.dp,
 ) {
     val c = Jawhar.colors
-    val pressed = remember { MutableInteractionSource() }.collectIsPressedAsState()
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
     val corner by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (pressed.value) size / 4 else size / 2,
+        targetValue = if (pressed) size / 4 else size / 2,
         animationSpec = motion(JawharMotion.spatialDefault<Dp>()),
     )
     val shape = SquircleShape(corner)
@@ -140,7 +133,7 @@ fun JFloatingButton(
             .softShadow(shape, 14.dp, 0.3f)
             .clip(shape)
             .background(if (filled) c.primary else c.bgSurface.copy(alpha = 0.92f))
-            .tappable(onClick = onClick),
+            .clickable(interactionSource = source, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         JIcon(icon, size = 22.dp, tint = if (filled) c.onPrimary else c.onSurface)

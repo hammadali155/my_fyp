@@ -72,10 +72,7 @@ fun JFloatingNav(selected: JTab, onSelect: (JTab) -> Unit, modifier: Modifier = 
             )
             val tabScale by animateFloatAsState(
                 targetValue = if (on) 1.05f else 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMediumLow,
-                ),
+                animationSpec = motion(JawharMotion.spatialDefault<Float>()),
             )
             Column(
                 Modifier
