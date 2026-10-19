@@ -60,11 +60,11 @@ Not done:
 - CAMeL Tools integration, Farasa sidecar, Nahw endpoints, AI Tutor, learning path, gamification, admin/CMS, notifications, Redis caching and rate limiting.
 - Frontend API wiring complete (2026-10-10): `HomeScreen`, `SurahListScreen`, `SearchScreen`, `SarfEngineScreen`, `WordFamilyScreen`, `ConjugationScreen`, `FlashcardScreen`, `VocabularyScreen`, `ProfileScreen`, `BadgesScreen`, `LogInScreen`, `SignUpScreen` all wired to real API via `LocalApi`. `AppState` singleton + `LocalApi` CompositionLocal added in `data/AppState.kt`.
 - Progressive navigation enabled: Gallery panel hidden behind configurable flag `AppState.galleryEnabled` (default `false`), allowing the app to run in its true progressive user flow (Splash -> Onboarding/Placement/Login -> Main Bottom Tabs: Home, Learn, Quran, Tutor, Profile -> Surah Reader with real API verses).
-- Tactile animations implemented: iOS stack-like push/pop transitions in `ScreenHost` with cubic bezier easing, interactive spring press scaling on `Modifier.tappable` and `JButton`, smooth pill expansion and color transitions on `PageDots`, color/elevation transitions on `JFloatingNav`, animated `JProgressBar` / `JProgressRing`, swipeable `HorizontalPager` onboarding carousel in `WelcomeScreen`, and dedicated non-sliding crossfade tab transitions.
 - Android system back button / gesture handled via expect/actual `SystemBackHandler` in `App.kt`, tracking stack history and falling back to the Home tab before exiting.
 - Onboarding guide screens updated: fixed 360dp card height preventing reshuffling, morphing animated background/star gradients, custom vector scenes for Quran reader, Sarf morphology tree, and AI Tutor/SRS dialog. Dynamic button row adapts from "Next" to split "Back"/"Next" to full-width "Get started" with smooth text animation in `JButton`.
 - Desktop runtime: default window size configured to a mobile viewport (`412.dp x 860.dp`, centered) in `desktopApp/src/main.kt`.
 - Screens still on mock data: `HomeLearnScreens` (lesson path not yet backend-backed), `NahwResultScreen` (no nahw parse endpoint yet), `TutorScreens` (AI tutor not yet built).
+- Placement and lesson content are mock-backed: `Mock.placementQuestions` (12 questions) and `Mock.lessonFormI` (5 content steps, 5 questions). No assessment or lesson endpoint exists yet. **The Arabic in both needs sign-off from someone who knows the language before shipping** — the questions set a learner's starting level.
 
 ## Repository Structure
 
