@@ -32,54 +32,48 @@ import com.meher.jawhar.data.api.getDecks
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.LocalNav
+import com.meher.jawhar.nav.LocalSession
 import kotlinx.coroutines.launch
 
 @Composable
 fun FlashcardScreen(showBack: Boolean = false) {
     val nav = LocalNav.current
     val api = LocalApi.current
+    val st = LocalSession.current.review
     val c = Jawhar.colors
     val t = Jawhar.type
-
-    var queue by remember { mutableStateOf<List<SrsCardDto>>(emptyList()) }
-    var index by remember { mutableStateOf(0) }
-    var back by remember { mutableStateOf(showBack) }
-    var loading by remember { mutableStateOf(true) }
-    var submitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        try { queue = api.srsDue() } catch (e: Exception) { } finally { loading = false }
+        st.loading = true
+        try { st.enter(api.srsDue(), showBack) } catch (e: Exception) { } finally { st.loading = false }
     }
 
-    val total = queue.size
-    val card = queue.getOrNull(index)
+    val total = st.queue.size
+    val card = st.card
 
     Page(
         backIcon = JI.Close,
-        title = if (loading) "…" else "${index + 1} / $total",
+        title = if (st.loading) "…" else "${st.index + 1} / $total",
         right = JI.More,
         scroll = false,
         cta = {
             when {
-                loading -> JSkeleton(Modifier.fillMaxWidth().height(56.dp), radius = 30.dp)
+                st.loading -> JSkeleton(Modifier.fillMaxWidth().height(56.dp), radius = 30.dp)
                 card == null -> JButton("Done", { nav.reset(Dest.Home) })
-                !back -> JButton("Show answer", { back = true })
+                !st.back -> JButton("Show answer", { st.reveal() })
                 else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     JRating.values().forEach { r ->
                         JRatingButton(r, {
-                            if (submitting) return@JRatingButton
                             val cardId = card.id
                             val rating = r.ordinal + 1
-                            if (index + 1 >= total) {
+                            if (st.index + 1 >= total) {
                                 nav.go(Dest.ReviewDone)
                             } else {
-                                index++
-                                back = false
+                                st.advance()
                             }
-                            submitting = true
                             scope.launch {
-                                try { api.srsReview(cardId, rating) } catch (e: Exception) { } finally { submitting = false }
+                                try { api.srsReview(cardId, rating) } catch (e: Exception) { }
                             }
                         }, Modifier.weight(1f))
                     }
@@ -87,17 +81,17 @@ fun FlashcardScreen(showBack: Boolean = false) {
             }
         },
     ) {
-        if (loading) {
+        if (st.loading) {
             JSkeleton(Modifier.fillMaxWidth().height(520.dp), radius = 48.dp)
         } else if (card == null) {
             JCenterState(JI.Check, c.successContainer, c.success, "Queue empty", "All cards reviewed. Come back tomorrow!")
         } else {
             Box(
-                Modifier.fillMaxWidth().height(520.dp).clip(SquircleShape(48.dp)).background(if (back) c.bgSurfaceVariant else c.primaryContainer)
+                Modifier.fillMaxWidth().height(520.dp).clip(SquircleShape(48.dp)).background(if (st.back) c.bgSurfaceVariant else c.primaryContainer)
                     .starOrnaments(c.primary, StarSpec(171.dp, 260.dp, 520.dp, 0.12f), StarSpec(330.dp, 500.dp, 240.dp, 0.1f))
-                    .tappable { back = !back },
+                    .tappable { st.back = !st.back },
             ) {
-                if (!back) {
+                if (!st.back) {
                     Row(Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         JTag(if (card.new_card) "New word" else "Review")
                         if (card.word_pos_tag != null) JTag(card.word_pos_tag)

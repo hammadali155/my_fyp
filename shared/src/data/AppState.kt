@@ -8,6 +8,7 @@ val LocalApi = compositionLocalOf { ApiClient() }
 
 object AppState {
     val api = ApiClient()
+    var galleryEnabled: Boolean = false
 
     fun isLoggedIn(): Boolean = Session.accessToken != null
 
@@ -17,3 +18,4 @@ object AppState {
         Session.userName = null
     }
 }
+

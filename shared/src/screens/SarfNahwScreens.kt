@@ -314,7 +314,7 @@ fun NahwResultScreen() {
         val s = selected
         if (s != null) {
             val w = words[s]
-            JBottomSheet(onDismiss = { selected = null }) {
+            JBottomSheet(onDismiss = { selected = null }, visible = true) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         JTag(w.roleName, background = w.role.color(c).copy(alpha = 0.14f), color = w.role.color(c), height = 28.dp)

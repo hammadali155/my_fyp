@@ -35,9 +35,11 @@ fun Page(
     onRight: () -> Unit = {},
     back: Boolean = true,
     backIcon: JI = JI.Back,
+    onBack: (() -> Unit)? = null,
     tab: JTab? = null,
     cta: (@Composable () -> Unit)? = null,
     scroll: Boolean = true,
+    scrollState: androidx.compose.foundation.ScrollState? = null,
     spacing: Dp = 16.dp,
     background: Color = Jawhar.colors.bgBase,
     overlay: (@Composable BoxScope.() -> Unit)? = null,
@@ -46,7 +48,7 @@ fun Page(
     val nav = LocalNav.current
     JScreen(
         background = background,
-        onBack = if (back && tab == null) ({ nav.back() }) else null,
+        onBack = onBack ?: if (back && tab == null) ({ nav.back() }) else null,
         backIcon = backIcon,
         rightIcon = right,
         onRight = onRight,
@@ -55,6 +57,7 @@ fun Page(
         onTab = { nav.tab(it) },
         cta = cta,
         scroll = scroll,
+        scrollState = scrollState,
         spacing = spacing,
         overlay = overlay,
         content = content,
@@ -149,11 +152,22 @@ fun FooterLink(prefix: String, link: String, onClick: () -> Unit) {
 fun PageDots(count: Int, active: Int, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         repeat(count) { i ->
+            val w by androidx.compose.animation.core.animateDpAsState(
+                if (i == active) 28.dp else 8.dp,
+                androidx.compose.animation.core.spring(
+                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                ),
+            )
+            val c by androidx.compose.animation.animateColorAsState(
+                if (i == active) Jawhar.colors.primary else Jawhar.colors.outline,
+                motion(JawharMotion.effectsDefault<androidx.compose.ui.graphics.Color>()),
+            )
             Box(
                 Modifier
-                    .size(width = if (i == active) 28.dp else 8.dp, height = 8.dp)
+                    .size(width = w, height = 8.dp)
                     .clip(CapsuleShape)
-                    .background(if (i == active) Jawhar.colors.primary else Jawhar.colors.outline),
+                    .background(c),
             )
         }
     }

@@ -20,6 +20,7 @@ dependencies:
 dependencies@android:
   - $compose.uiTooling
   - $libs.ktor.client.okhttp
+  - $libs.androidx.activity.compose
 
 settings:
   kotlin:

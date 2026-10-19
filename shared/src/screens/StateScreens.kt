@@ -102,7 +102,7 @@ fun EmptyBookmarksScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Surahs", "Juz", "Bookmarks").forEachIndexed { i, l -> JChip(l, i == 2, {}) } }
         Spacer(Modifier.height(24.dp))
         JCenterState(JI.Bookmark, c.primaryContainer, c.primary, "No bookmarks yet", "Tap the bookmark on any ayah to save it here.")
-        JButton("Browse the Quran", { nav.reset(Dest.Quran) }, Modifier.align(Alignment.CenterHorizontally).width(170.dp), JButtonStyle.Tonal, height = 44.dp)
+        JButton("Browse the Quran", { nav.tab(JTab.Quran) }, Modifier.align(Alignment.CenterHorizontally).width(170.dp), JButtonStyle.Tonal, height = 44.dp)
     }
 }
 
@@ -110,7 +110,7 @@ fun EmptyBookmarksScreen() {
 fun AllCaughtUpScreen() {
     val nav = LocalNav.current
     val c = Jawhar.colors
-    StateScreen(JI.Check, c.successContainer, c.success, "All caught up", "No cards are due right now. Your next review is in 4 hours.", "Learn new words", "Back to Home", onPrimary = { nav.reset(Dest.Learn) }, onSecondary = { nav.reset(Dest.Home) })
+    StateScreen(JI.Check, c.successContainer, c.success, "All caught up", "No cards are due right now. Your next review is in 4 hours.", "Learn new words", "Back to Home", onPrimary = { nav.tab(JTab.Learn) }, onSecondary = { nav.tab(JTab.Home) })
 }
 
 @Composable
@@ -213,7 +213,7 @@ fun DeleteDialogScreen() = SettingsScreen(showDelete = true)
 fun LeaveLessonScreen() {
     val nav = LocalNav.current
     Box(Modifier.fillMaxSize()) {
-        LessonQuizScreen()
+        LessonQuizStep(Mock.lessonFormI.quiz[0], 0, Mock.lessonFormI.quiz.size, null, {}, {}, {})
         JDialog("Leave this lesson?", "Your progress in this lesson will be lost. Completed lessons stay saved.", "Leave", { nav.reset(Dest.Learn) }, {}, cancel = "Keep going", icon = JI.Close)
     }
 }

@@ -40,7 +40,14 @@ Done and tested:
 - `POST /morphology/conjugate`: past/present/imperative for sound roots only; weak/hamzated/doubled roots return explicit `unsupported_reason`. Built from the existing VERB_FORMS_CATALOG (`fill_pattern` + `IMPERATIVE_PATTERNS`).
 - `GET /morphology/word-family/{root}`: distinct lemmas grouped by pos_tag with counts and one real example verse each; `GET /morphology/patterns`: verb forms catalog + static noun patterns (`app/db/noun_patterns.py`) with example words resolved from the `words` table (null when absent — never invented).
 
-- Mock frontend: 46 numbered screens + 28 state/edge-case screens + 7 dark-mode variants + 4 admin screens (105 total) registered in `Screens.kt`; grouped navigation via `Dest` constants in `Nav.kt`. Desktop shell shows a gallery sidebar for browsing all screens.
+- Frontend screens: `Screens.kt` holds one `ScreenSpec` per **visual state**, and each spec carries a `real` flag. 88 entries total: 48 numbered + 28 state/edge-case + 7 dark-mode + 4 admin + 1 word-popup. `Screens.real` (51) is the app's routable catalog; `Screens.byId` (all 88) is used only when `AppState.galleryEnabled` is true. Never register a *state variant* (error, empty, skeleton, dialog, dark mode) as a routable destination — the host screen renders it from its own state, and the spec stays `real = false` for design review.
+- Lesson flow: one destination (`Dest.Lesson`), same shape as placement. `LessonScreen()` steps through intro → content steps → quiz → complete. Lesson copy lives in `Mock.lessonFormI` (`Lesson` / `LessonStep` / `LessonQ`); `Mock.lessonScore` grades accuracy.
+- Placement assessment: one destination (`Dest.Placement`), not three. `PlacementScreen()` holds a `step` index (0 = intro, 1..n = question, n+1 = result) and an answer list; the three visual steps are `PlacementIntroStep`/`PlacementQuestionStep`/`PlacementResultStep`. Questions live in `Mock.placementQuestions` (a `PlacementQ` per item, tagged with a `skill`); `Mock.placementScore(picks)` grades them per skill. The result step's "Review answers" action sets `reviewing = true` and returns to question 1, where each question shows its correct/incorrect state; stepping past the last question returns to the result. Swapping in a real endpoint means replacing the `Mock` lookup, not the screen.
+- A `Dest.*` entry must render the flow's `XxxScreen()` state machine, never a `XxxStep()` preview — a step preview has no-op callbacks, so its buttons silently do nothing. Gallery previews live under their own string ids with `real = false`.
+- Screen state that must outlive its composable lives in `nav/RouteState.kt`: `ScreenSession` (provided as `LocalSession`, remembered once in `App()` next to `JNav`) holds a `ReaderState` (ayah reader: surah, verses, scroll, selected word, popup) and a `ReviewState` (flashcard queue, index, reveal). Plain `remember` is disposed the moment a screen leaves the composition, so it does not survive navigation. New long-lived screens add a field to `ScreenSession`, not a global on `AppState`.
+- Motion: every animation reads from `design/Motion.kt` — never a literal `tween(...)` or `CubicBezierEasing(...)`. `JawharMotion.spatialFast/Default/Slow` move things on screen and may overshoot; `effectsFast/Default/Slow` animate colour and opacity and land dead on target. Values are the M3 Expressive scheme from m3.material.io, generic in `T` so one spring drives `Float`, `Dp` and `Color`. Wrap with `motion(...)` so `JawharMotion.reduced` collapses it to a snap. The only legal exceptions are `infiniteRepeatable` decorative loops in the onboarding, which springs cannot drive.
+- Navigation: `JNav.stack` is a list of `Route(dest, arg)`. `nav.go(Dest.Xxx, arg)` pushes, `nav.reset(Dest.Xxx)` clears the stack (post-auth / logout only), `nav.tab(JTab.Xxx)` switches tabs and sets the crossfade flag. A step *within* one flow is state, not a destination (placement is the reference example). Pass per-screen data via `arg` + `nav.currentArg`, never via a global on `AppState`.
+- Desktop shell shows a gallery sidebar for browsing all 88 screens.
 - Custom design system (`shared/src/design/`): `JawharColors` (light + dark tokens, 7 i'rab role colours), `JawharType` (Arabic + Latin scales), `JI` icon set, `Cards`, `Controls`, `Layout`, `Shapes`, `JLogoMark`, `JStarBadge`, `JArabic` RTL wrapper, `SquircleShape`, `softShadow`, `starOrnaments` canvas helpers.
 - KMP API client (`shared/src/data/api/`): `ApiClient` (Ktor-based, expect/actual per platform), `ApiModels.kt` with serializable DTOs for all backend domains; `Session` object for token storage; `AuthApi` + `authorizedGet/Post` helpers; extension fns for SRS due/review/stats, Quran search, roots, conjugate, word-family, patterns, badges.
 - Health endpoints: `GET /health` (full — DB ping, uptime, version, platform), `GET /health/ready`, `GET /health/live`.
@@ -52,7 +59,12 @@ Not done:
 - ~~Frontend still runs on hard-coded sample data; no API client yet~~ — mock UI complete 2026-10-10; `ApiClient` scaffolded and wired to all existing backend endpoints.
 - CAMeL Tools integration, Farasa sidecar, Nahw endpoints, AI Tutor, learning path, gamification, admin/CMS, notifications, Redis caching and rate limiting.
 - Frontend API wiring complete (2026-10-10): `HomeScreen`, `SurahListScreen`, `SearchScreen`, `SarfEngineScreen`, `WordFamilyScreen`, `ConjugationScreen`, `FlashcardScreen`, `VocabularyScreen`, `ProfileScreen`, `BadgesScreen`, `LogInScreen`, `SignUpScreen` all wired to real API via `LocalApi`. `AppState` singleton + `LocalApi` CompositionLocal added in `data/AppState.kt`.
-- Screens still on mock data: `AyahReaderScreen` (needs verse-level navigation with surahId), `HomeLearnScreens` (lesson path not yet backend-backed), `NahwResultScreen` (no nahw parse endpoint yet), `TutorScreens` (AI tutor not yet built).
+- Progressive navigation enabled: Gallery panel hidden behind configurable flag `AppState.galleryEnabled` (default `false`), allowing the app to run in its true progressive user flow (Splash -> Onboarding/Placement/Login -> Main Bottom Tabs: Home, Learn, Quran, Tutor, Profile -> Surah Reader with real API verses).
+- Android system back button / gesture handled via expect/actual `SystemBackHandler` in `App.kt`, tracking stack history and falling back to the Home tab before exiting.
+- Onboarding guide screens updated: fixed 360dp card height preventing reshuffling, morphing animated background/star gradients, custom vector scenes for Quran reader, Sarf morphology tree, and AI Tutor/SRS dialog. Dynamic button row adapts from "Next" to split "Back"/"Next" to full-width "Get started" with smooth text animation in `JButton`.
+- Desktop runtime: default window size configured to a mobile viewport (`412.dp x 860.dp`, centered) in `desktopApp/src/main.kt`.
+- Screens still on mock data: `HomeLearnScreens` (lesson path not yet backend-backed), `NahwResultScreen` (no nahw parse endpoint yet), `TutorScreens` (AI tutor not yet built).
+- Placement and lesson content are mock-backed: `Mock.placementQuestions` (12 questions) and `Mock.lessonFormI` (5 content steps, 5 questions). No assessment or lesson endpoint exists yet. **The Arabic in both needs sign-off from someone who knows the language before shipping** — the questions set a learner's starting level.
 
 ## Repository Structure
 
@@ -93,17 +105,19 @@ my_fyp/
 │       │   ├── Cards.kt             # card composables
 │       │   ├── Controls.kt          # buttons, inputs, selectors
 │       │   ├── Icons.kt             # JI icon path catalogue
+│       │   ├── Motion.kt            # M3 Expressive spring tokens (spatial + effects), motion()
 │       │   ├── Layout.kt            # scaffold, tab bar, section labels
 │       │   └── Shapes.kt            # SquircleShape + helpers
 │       ├── nav/
-│       │   └── Nav.kt               # JNav stack, Dest constants, LocalNav
+│       │   ├── Nav.kt               # JNav Route(dest, arg) stack, Dest constants, LocalNav
+│       │   └── RouteState.kt        # ScreenSession/LocalSession, ReaderState, ReviewState
 │       ├── screens/
-│       │   ├── Screens.kt           # ScreenSpec registry (105 screens)
+│       │   ├── Screens.kt           # ScreenSpec registry (86 entries; Screens.real = 56 routable)
 │       │   ├── Gallery.kt           # desktop sidebar gallery panel
 │       │   ├── Mock.kt              # static mock data objects
-│       │   ├── OnboardingScreens.kt # Splash → Placement → DailyGoal → NotifPermission
+│       │   ├── OnboardingScreens.kt # Splash → Placement (1 dest, 3 steps) → DailyGoal → NotifPermission
 │       │   ├── AuthScreens.kt       # SignUp, LogIn, Forgot, Verify, state variants
-│       │   ├── HomeLearnScreens.kt  # Home, LearnPath, Lesson intro/content/quiz/complete,
+│       │   ├── HomeLearnScreens.kt  # Home, LearnPath, Lesson (1 dest, 4 steps),
 │       │   │                        # DailyChallenge
 │       │   ├── QuranScreens.kt      # SurahList, AyahReader, Search
 │       │   ├── SarfNahwScreens.kt   # SarfEngine, WordFamily, Conjugation, NahwInput/Result
@@ -146,7 +160,7 @@ Backend (run from `backend/`):
 Client (run from repo root, Windows uses `kotlin.bat`):
 - Build: `./kotlin build`
 - Test: `./kotlin test`
-- Run desktop: `./kotlin run -m desktopApp` (opens gallery sidebar for browsing all 105 screens)
+- Run desktop: `./kotlin run -m desktopApp` (opens gallery sidebar for browsing all 88 screens)
 - Hot reload: compose hot-reload is enabled via the `hotReload.runtimeApi` dependency in `shared/module.yaml`
 
 A change is done only when `pytest`, `ruff check` and `mypy app` all pass.
@@ -171,7 +185,7 @@ Package root: `com.meher.jawhar`. All files target the `shared` module (`shared/
 - **Design system**: always import from `com.meher.jawhar.design.*`. Use `Jawhar.colors` and `Jawhar.type` for tokens — never hardcode colours or text sizes.
 - **Arabic text**: use `JArabic(...)` (wraps in `LocalLayoutDirection = RTL`). Never pass Arabic strings to plain `Text()` unless direction is already flipped.
 - **Navigation**: use `LocalNav.current` to get the `JNav` instance. Navigate with `nav.go(Dest.Xxx)`, back with `nav.back()`, tab switch with `nav.tab(JTab.Xxx)`. Never store `nav` in a field; always read from `LocalNav`.
-- **Screens**: register every new screen in `Screens.all` inside `screens/Screens.kt`. Use the `Dest` constant for the id. Group under one of the existing group strings.
+- **Screens**: register every new screen in `Screens.all` inside `screens/Screens.kt`. Use the `Dest` constant for the id. Group under one of the existing group strings. Default `real = true` only for genuinely reachable screens; state variants and dark-mode entries set `real = false` and are gallery-only.
 - **Mock data**: static sample data lives in `screens/Mock.kt` (data classes + `object Mock`). Keep it there; do not scatter inline literals across screen files.
 - **API calls**: all Ktor calls go through `ApiClient` in `data/api/ApiClient.kt`. Add new endpoint fns as extension functions on `ApiClient`. DTOs go in `ApiModels.kt` annotated with `@Serializable`.
 - **Platform expects**: `createHttpClient()` and `defaultApiBaseUrl()` are `expect fun` in `ApiClient.kt`; `actual` impls live in `src@android/`, `src@jvm/`, `src@ios*/`, `src@wasmJs/`.

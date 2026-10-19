@@ -38,13 +38,31 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
+
 @Composable
-fun Modifier.tappable(enabled: Boolean = true, onClick: () -> Unit): Modifier = this.clickable(
-    interactionSource = remember { MutableInteractionSource() },
-    indication = null,
-    enabled = enabled,
-    onClick = onClick,
-)
+fun Modifier.tappable(enabled: Boolean = true, onClick: () -> Unit): Modifier {
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val alpha by animateFloatAsState(
+        targetValue = if (pressed && enabled) 0.9f else 1f,
+        animationSpec = motion(JawharMotion.effectsDefault<Float>()),
+    )
+    return this
+        .graphicsLayer { this.alpha = alpha }
+        .clickable(
+            interactionSource = source,
+            indication = null,
+            enabled = enabled,
+            onClick = onClick,
+        )
+}
 
 fun Modifier.softShadow(shape: Shape, elevation: Dp = 14.dp, alpha: Float = 0.28f): Modifier = this.shadow(
     elevation = elevation,

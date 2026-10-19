@@ -34,6 +34,7 @@ import com.meher.jawhar.data.api.search
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.LocalNav
+import com.meher.jawhar.nav.LocalSession
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -116,7 +117,9 @@ fun SurahListScreen() {
             loadError -> JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load surahs", "Check your connection and pull to retry.")
             else -> surahs.filter { q.isBlank() || it.name_english.contains(q, ignoreCase = true) || it.name_transliteration.contains(q, ignoreCase = true) }.forEach { s ->
                 Row(
-                    Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).tappable { nav.go(Dest.Reader) }.padding(horizontal = 16.dp, vertical = 14.dp),
+                    Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).tappable {
+                        nav.go(Dest.Reader, ReaderTarget(s.number, s.name_transliteration))
+                    }.padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
@@ -132,16 +135,38 @@ fun SurahListScreen() {
     }
 }
 
+data class ReaderTarget(val surahId: Int, val surahName: String)
+
 @Composable
 fun AyahReaderScreen(showPopup: Boolean = false) {
     val nav = LocalNav.current
+    val api = LocalApi.current
+    val st = LocalSession.current.reader
     val c = Jawhar.colors
     val t = Jawhar.type
-    var popup by remember { mutableStateOf(showPopup) }
+    val target = nav.currentArg as? ReaderTarget
+    val surahId = target?.surahId ?: 1
+
+    LaunchedEffect(surahId, showPopup) {
+        if (showPopup) st.popup = true
+    }
+
+    LaunchedEffect(surahId) {
+        if (st.enterSurah(surahId, target?.surahName ?: "Al-Fatiha")) st.scroll.scrollTo(0)
+        try {
+            st.verses = api.getVerses(surahId, page = 1, pageSize = 50).items
+        } catch (e: Exception) {
+            st.failed = true
+        } finally {
+            st.loading = false
+        }
+    }
+
     Page(
-        title = "Al-Fatiha",
+        title = st.surahName,
         right = JI.More,
         spacing = 28.dp,
+        scrollState = st.scroll,
         cta = {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(
@@ -151,31 +176,79 @@ fun AyahReaderScreen(showPopup: Boolean = false) {
                 ) {
                     JIcon(JI.Spark, size = 22.dp, tint = c.primary)
                     JText("Analyse verse", t.labelL, c.onSurface, Modifier.weight(1f))
-                    JText("Ayah 2", t.labelM, c.onSurfaceSubtle)
+                    JText("Ayah 1", t.labelM, c.onSurfaceSubtle)
                 }
                 JFloatingButton(JI.Bookmark, {}, size = 56.dp)
             }
         },
-        overlay = { if (popup) WordSheet(onDismiss = { popup = false }, onSarf = { popup = false; nav.go(Dest.Sarf) }) },
+        overlay = {
+            WordSheet(
+                word = st.selectedWord,
+                visible = st.popup,
+                onDismiss = { st.popup = false },
+                onSarf = {
+                    st.popup = false
+                    nav.go(Dest.Sarf)
+                },
+            )
+        },
     ) {
-        Mock.ayat.forEach { a -> AyahBlock(a, highlight = if (a.number == 2) listOf(2) else emptyList(), onWord = { if (a.number == 2 && it == 2) popup = true }) }
+        when {
+            st.loading -> repeat(4) {
+                JCard(Modifier.fillMaxWidth(), padding = 16.dp) {
+                    JSkeleton(Modifier.fillMaxWidth(0.3f).height(14.dp))
+                    Spacer(Modifier.height(10.dp))
+                    JSkeleton(Modifier.fillMaxWidth().height(48.dp))
+                    Spacer(Modifier.height(8.dp))
+                    JSkeleton(Modifier.fillMaxWidth(0.7f).height(12.dp))
+                }
+            }
+            st.verses.isEmpty() -> Mock.ayat.forEach { a ->
+                AyahBlock(
+                    a,
+                    highlight = if (a.number == 2) listOf(2) else emptyList(),
+                    onWord = { if (a.number == 2 && it == 2) { st.selectedWord = null; st.popup = true } },
+                )
+            }
+            else -> st.verses.forEach { v ->
+                val wordTexts = if (v.words.isNotEmpty()) v.words.map { it.text_uthmani } else v.text_uthmani.split(" ")
+                AyahBlock(
+                    AyahItem(
+                        number = v.ayah_number,
+                        words = wordTexts,
+                        translit = "Ayah ${v.ayah_number}",
+                        english = v.translation_en ?: "",
+                    ),
+                    highlight = emptyList(),
+                    onWord = { wIdx ->
+                        st.selectedWord = v.words.getOrNull(wIdx)
+                        st.popup = true
+                    },
+                )
+            }
+        }
     }
 }
 
 @Composable
-fun WordSheet(onDismiss: () -> Unit, onSarf: () -> Unit) {
+fun WordSheet(word: com.meher.jawhar.data.api.WordDto?, visible: Boolean, onDismiss: () -> Unit, onSarf: () -> Unit) {
     val c = Jawhar.colors
     val t = Jawhar.type
-    JBottomSheet(onDismiss) {
+    JBottomSheet(onDismiss, visible = visible) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                JText("Lord, Sustainer", t.titleL, c.onSurface)
-                JText("rabbi", t.translit, c.onSurfaceVariant)
+                JText(word?.translation_en ?: "Tap a word to inspect it", t.titleL, c.onSurface)
+                if (word?.transliteration != null) JText(word.transliteration, t.translit, c.onSurfaceVariant)
             }
-            JArabic("رَبِّ", t.arabicWordL, c.onSurface)
+            if (word != null) JArabic(word.text_uthmani, t.arabicWordL, c.onSurface)
         }
         JCard(Modifier.fillMaxWidth(), padding = 8.dp) {
-            listOf("Root" to "ر ب ب", "Pattern" to "فَعٌّ", "Part of speech" to "Noun · Genitive", "Role in verse" to "Mudaf").forEach { (a, b) ->
+            listOf(
+                "Root" to (word?.root ?: "\u2014"),
+                "Pattern" to (word?.pattern ?: "\u2014"),
+                "Part of speech" to (word?.pos_tag ?: "\u2014"),
+                "Lemma" to (word?.lemma ?: "\u2014"),
+            ).forEach { (a, b) ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     JText(a, t.labelM, c.onSurfaceSubtle, Modifier.weight(1f))
                     JText(b, t.titleS, c.onSurface)
@@ -183,7 +256,9 @@ fun WordSheet(onDismiss: () -> Unit, onSarf: () -> Unit) {
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Masculine", "Singular", "Genitive").forEach { JTag(it, background = c.primaryContainer, color = c.onPrimaryContainer) }
+            listOfNotNull(word?.gender, word?.number, word?.tense).forEach {
+                JTag(it, background = c.primaryContainer, color = c.onPrimaryContainer)
+            }
         }
         TwoButtons("Add to cards", onDismiss, "Open in Sarf", onSarf)
     }
