@@ -1,0 +1,39 @@
+mode: analyzer-only (CAMeL BERT disambiguator, whole-verse context) + train-split lemma->root remap
+camel available: True
+lexicon ranking: on (train = odd-numbered surahs; 3112 lemma keys, 1317 root keys, 2995 lemma->root entries)
+split: test (even-numbered surahs only)
+seed: 1; sample size: 1000 of 41205 eligible words
+skipped: 0 missing text, 0 missing gold root, 0 filtered by --pos, 0 filtered by --min-length
+sample: 634 real-root words, 366 rootless words (gold = ـ)
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  53%|█████▎    | 105/199 [00:00<00:00, 1038.37it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 1434.16it/s]
+verse batching: 753 verses disambiguated in one call (920 sample words); 55 verses fell back to the single-word path (token-count mismatch, 80 sample words); 0 verses fell back (BERT verse call failed); 33 words fell back (missing/unusable position analysis)
+lemma-remap: 664 of 1000 predictions had their root replaced from the train-split map
+  100/1000 done, real-root accuracy so far 57/63
+  200/1000 done, real-root accuracy so far 113/122
+  300/1000 done, real-root accuracy so far 176/189
+  400/1000 done, real-root accuracy so far 231/249
+  500/1000 done, real-root accuracy so far 298/318
+  600/1000 done, real-root accuracy so far 363/387
+  700/1000 done, real-root accuracy so far 423/448
+  800/1000 done, real-root accuracy so far 484/510
+  900/1000 done, real-root accuracy so far 542/572
+  1000/1000 done, real-root accuracy so far 598/634
+
+(a) real-root accuracy: 598/634 = 0.943 (PRD target 0.90) -> PASS
+(b) rootless accuracy (correct only if no root predicted): 0/366 = 0.000
+(c) combined: 598/1000 = 0.598
+real-root matches that relied on the weak-'#' wildcard: 17
+elapsed: 94.3s
+
+By gold pos_tag (real-root words):
+       N: 301/313 = 0.962
+       V: 217/241 = 0.900
+      PN: 37/37 = 1.000
+     ADJ: 30/30 = 1.000
+     LOC: 5/5 = 1.000
+       T: 4/4 = 1.000
+    INTG: 2/2 = 1.000
+    COND: 1/1 = 1.000
+    IMPN: 1/1 = 1.000
+
+Errors written to /tmp/opencode/sarf-remap-seed1.csv: 402 rows

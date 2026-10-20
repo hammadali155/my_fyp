@@ -1,0 +1,31 @@
+mode: analyzer-only (CAMeL first analysis)
+camel available: True
+seed: 123; sample size: 1000 of 77429 eligible words
+skipped: 0 missing text, 0 missing gold root, 0 filtered by --pos, 0 filtered by --min-length
+sample: 636 real-root words, 364 rootless words (gold = ـ)
+  100/1000 done, real-root accuracy so far 44/62
+  200/1000 done, real-root accuracy so far 93/131
+  300/1000 done, real-root accuracy so far 138/193
+  400/1000 done, real-root accuracy so far 187/257
+  500/1000 done, real-root accuracy so far 229/317
+  600/1000 done, real-root accuracy so far 274/384
+  700/1000 done, real-root accuracy so far 319/451
+  800/1000 done, real-root accuracy so far 351/508
+  900/1000 done, real-root accuracy so far 394/571
+  1000/1000 done, real-root accuracy so far 443/636
+
+(a) real-root accuracy: 443/636 = 0.697 (PRD target 0.90) -> BELOW TARGET
+(b) rootless accuracy (correct only if no root predicted): 10/364 = 0.027
+(c) combined: 453/1000 = 0.453
+real-root matches that relied on the weak-'#' wildcard: 30
+elapsed: 3.0s
+
+By gold pos_tag (real-root words):
+       N: 226/302 = 0.748
+       V: 153/261 = 0.586
+      PN: 29/37 = 0.784
+     ADJ: 29/29 = 1.000
+     LOC: 4/4 = 1.000
+       T: 2/3 = 0.667
+
+Errors written to /home/madi/my_fyp/sarf_eval_errors.csv: 547 rows

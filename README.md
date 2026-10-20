@@ -21,6 +21,8 @@ Use the run configurations provided by the run widget in your IDE's toolbar. You
 
 Run the project's tests with `./kotlin test`, or `./kotlin test -m <module>` for a single module.
 
+The backend's sarf (root-extraction) evaluation methodology, measured numbers and raw run outputs are documented in [docs/evaluation/sarf-baseline.md](./docs/evaluation/sarf-baseline.md).
+
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html), [Kotlin Toolchain](https://kotlin-toolchain.org/dev/), [Compose Multiplatform](https://kotlinlang.org/compose-multiplatform/), [Kotlin/Wasm](https://kotl.in/wasm/).

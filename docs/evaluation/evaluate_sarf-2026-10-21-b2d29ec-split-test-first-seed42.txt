@@ -1,0 +1,34 @@
+mode: analyzer-only (CAMeL plain analyzer)
+camel available: True
+lexicon ranking: off (old first-usable behaviour)
+split: test (even-numbered surahs only)
+seed: 42; sample size: 1000 of 41205 eligible words
+skipped: 0 missing text, 0 missing gold root, 0 filtered by --pos, 0 filtered by --min-length
+sample: 632 real-root words, 368 rootless words (gold = ـ)
+  100/1000 done, real-root accuracy so far 38/67
+  200/1000 done, real-root accuracy so far 81/126
+  300/1000 done, real-root accuracy so far 118/188
+  400/1000 done, real-root accuracy so far 172/259
+  500/1000 done, real-root accuracy so far 214/318
+  600/1000 done, real-root accuracy so far 265/384
+  700/1000 done, real-root accuracy so far 311/450
+  800/1000 done, real-root accuracy so far 351/511
+  900/1000 done, real-root accuracy so far 394/568
+  1000/1000 done, real-root accuracy so far 434/632
+
+(a) real-root accuracy: 434/632 = 0.687 (PRD target 0.90) -> BELOW TARGET
+(b) rootless accuracy (correct only if no root predicted): 14/368 = 0.038
+(c) combined: 448/1000 = 0.448
+real-root matches that relied on the weak-'#' wildcard: 39
+elapsed: 5.0s
+
+By gold pos_tag (real-root words):
+       N: 218/289 = 0.754
+       V: 149/259 = 0.575
+      PN: 33/43 = 0.767
+     ADJ: 24/30 = 0.800
+     LOC: 6/7 = 0.857
+       T: 2/2 = 1.000
+    INTG: 2/2 = 1.000
+
+Errors written to /tmp/opencode/sarf-first-seed42.csv: 552 rows
