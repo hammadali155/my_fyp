@@ -1,0 +1,36 @@
+mode: analyzer-only (CAMeL BERT disambiguator, whole-verse context)
+camel available: True
+lexicon ranking: on (train = odd-numbered surahs; 3112 lemma keys, 1317 root keys)
+split: test (even-numbered surahs only)
+seed: 7; sample size: 1000 of 41205 eligible words
+skipped: 0 missing text, 0 missing gold root, 0 filtered by --pos, 0 filtered by --min-length
+sample: 657 real-root words, 343 rootless words (gold = ـ)
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  10%|▉         | 19/199 [00:00<00:01, 156.63it/s]Loading weights:  24%|██▎       | 47/199 [00:00<00:00, 218.28it/s]Loading weights:  35%|███▌      | 70/199 [00:00<00:00, 205.04it/s]Loading weights:  46%|████▌     | 91/199 [00:00<00:00, 173.58it/s]Loading weights:  60%|█████▉    | 119/199 [00:00<00:00, 191.04it/s]Loading weights:  70%|██████▉   | 139/199 [00:00<00:00, 170.63it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 256.88it/s]
+verse batching: 733 verses disambiguated in one call (897 sample words); 64 verses fell back to the single-word path (token-count mismatch, 103 sample words); 0 verses fell back (BERT verse call failed); 37 words fell back (missing/unusable position analysis)
+  100/1000 done, real-root accuracy so far 49/63
+  200/1000 done, real-root accuracy so far 108/132
+  300/1000 done, real-root accuracy so far 161/198
+  400/1000 done, real-root accuracy so far 208/261
+  500/1000 done, real-root accuracy so far 261/329
+  600/1000 done, real-root accuracy so far 313/391
+  700/1000 done, real-root accuracy so far 373/460
+  800/1000 done, real-root accuracy so far 424/530
+  900/1000 done, real-root accuracy so far 470/587
+  1000/1000 done, real-root accuracy so far 525/657
+
+(a) real-root accuracy: 525/657 = 0.799 (PRD target 0.90) -> BELOW TARGET
+(b) rootless accuracy (correct only if no root predicted): 0/343 = 0.000
+(c) combined: 525/1000 = 0.525
+real-root matches that relied on the weak-'#' wildcard: 56
+elapsed: 157.1s
+
+By gold pos_tag (real-root words):
+       N: 277/324 = 0.855
+       V: 172/254 = 0.677
+      PN: 37/38 = 0.974
+     ADJ: 31/32 = 0.969
+       T: 3/4 = 0.750
+     LOC: 4/4 = 1.000
+    INTG: 1/1 = 1.000
+
+Errors written to /tmp/opencode/sarf-bertverse-seed7.csv: 475 rows
