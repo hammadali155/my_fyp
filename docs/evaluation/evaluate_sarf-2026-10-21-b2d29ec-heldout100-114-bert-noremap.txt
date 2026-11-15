@@ -1,0 +1,28 @@
+mode: analyzer-only (CAMeL BERT disambiguator, whole-verse context)
+camel available: True
+lexicon ranking: on (train = odd-numbered surahs minus held-out surahs 100-114; 3087 lemma keys, 1304 root keys, 2970 lemma->root entries)
+held-out: surahs 100-114 (every eligible word; excluded from the lexicon)
+seed: 42; sample size: 352 of 352 eligible words
+skipped: 0 missing text, 0 missing gold root, 0 filtered by --pos, 0 filtered by --min-length
+sample: 232 real-root words, 120 rootless words (gold = ـ)
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  10%|█         | 20/199 [00:00<00:00, 198.84it/s]Loading weights:  25%|██▍       | 49/199 [00:00<00:00, 226.29it/s]Loading weights:  36%|███▌      | 72/199 [00:00<00:00, 186.12it/s]Loading weights:  47%|████▋     | 93/199 [00:00<00:00, 138.63it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 310.58it/s]
+verse batching: 75 verses disambiguated in one call (301 sample words); 15 verses fell back to the single-word path (token-count mismatch, 51 sample words); 0 verses fell back (BERT verse call failed); 15 words fell back (missing/unusable position analysis)
+  100/352 done, real-root accuracy so far 50/71
+  200/352 done, real-root accuracy so far 97/132
+  300/352 done, real-root accuracy so far 154/199
+
+(a) real-root accuracy: 180/232 = 0.776 (PRD target 0.90) -> BELOW TARGET
+(b) rootless accuracy (correct only if no root predicted): 0/120 = 0.000
+(c) combined: 180/352 = 0.511
+real-root matches that relied on the weak-'#' wildcard: 20
+elapsed: 218.6s
+
+By gold pos_tag (real-root words):
+       N: 111/138 = 0.804
+       V: 56/77 = 0.727
+     ADJ: 5/9 = 0.556
+      PN: 5/5 = 1.000
+       T: 2/2 = 1.000
+    INTG: 1/1 = 1.000
+
+Errors written to /tmp/opencode/sarf-heldout-bert-noremap.csv: 172 rows

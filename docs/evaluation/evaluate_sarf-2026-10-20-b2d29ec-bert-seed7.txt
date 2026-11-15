@@ -1,0 +1,33 @@
+mode: analyzer-only (CAMeL BERT disambiguator)
+camel available: True
+seed: 7; sample size: 1000 of 77429 eligible words
+skipped: 0 missing text, 0 missing gold root, 0 filtered by --pos, 0 filtered by --min-length
+sample: 647 real-root words, 353 rootless words (gold = ـ)
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 2154.19it/s]
+  100/1000 done, real-root accuracy so far 56/69
+  200/1000 done, real-root accuracy so far 100/127
+  300/1000 done, real-root accuracy so far 145/189
+  400/1000 done, real-root accuracy so far 197/261
+  500/1000 done, real-root accuracy so far 246/320
+  600/1000 done, real-root accuracy so far 296/384
+  700/1000 done, real-root accuracy so far 343/445
+  800/1000 done, real-root accuracy so far 395/510
+  900/1000 done, real-root accuracy so far 449/578
+  1000/1000 done, real-root accuracy so far 503/647
+
+(a) real-root accuracy: 503/647 = 0.777 (PRD target 0.90) -> BELOW TARGET
+(b) rootless accuracy (correct only if no root predicted): 0/353 = 0.000
+(c) combined: 503/1000 = 0.503
+real-root matches that relied on the weak-'#' wildcard: 45
+elapsed: 54.9s
+
+By gold pos_tag (real-root words):
+       N: 270/331 = 0.816
+       V: 175/247 = 0.709
+      PN: 34/41 = 0.829
+     ADJ: 16/20 = 0.800
+     LOC: 6/6 = 1.000
+    INTG: 1/1 = 1.000
+       T: 1/1 = 1.000
+
+Errors written to /home/madi/my_fyp/sarf_eval_errors.csv: 497 rows

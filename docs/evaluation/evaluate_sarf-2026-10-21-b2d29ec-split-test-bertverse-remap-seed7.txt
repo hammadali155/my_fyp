@@ -1,0 +1,37 @@
+mode: analyzer-only (CAMeL BERT disambiguator, whole-verse context) + train-split lemma->root remap
+camel available: True
+lexicon ranking: on (train = odd-numbered surahs; 3112 lemma keys, 1317 root keys, 2995 lemma->root entries)
+split: test (even-numbered surahs only)
+seed: 7; sample size: 1000 of 41205 eligible words
+skipped: 0 missing text, 0 missing gold root, 0 filtered by --pos, 0 filtered by --min-length
+sample: 657 real-root words, 343 rootless words (gold = ـ)
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:   9%|▉         | 18/199 [00:00<00:01, 170.28it/s]Loading weights:  18%|█▊        | 36/199 [00:00<00:01, 153.51it/s]Loading weights:  27%|██▋       | 54/199 [00:00<00:00, 161.46it/s]Loading weights:  36%|███▌      | 71/199 [00:00<00:00, 158.77it/s]Loading weights:  44%|████▎     | 87/199 [00:00<00:00, 151.47it/s]Loading weights:  54%|█████▍    | 107/199 [00:00<00:00, 166.71it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 296.62it/s]
+verse batching: 733 verses disambiguated in one call (897 sample words); 64 verses fell back to the single-word path (token-count mismatch, 103 sample words); 0 verses fell back (BERT verse call failed); 37 words fell back (missing/unusable position analysis)
+lemma-remap: 654 of 1000 predictions had their root replaced from the train-split map
+  100/1000 done, real-root accuracy so far 57/63
+  200/1000 done, real-root accuracy so far 119/132
+  300/1000 done, real-root accuracy so far 181/198
+  400/1000 done, real-root accuracy so far 238/261
+  500/1000 done, real-root accuracy so far 301/329
+  600/1000 done, real-root accuracy so far 358/391
+  700/1000 done, real-root accuracy so far 425/460
+  800/1000 done, real-root accuracy so far 482/530
+  900/1000 done, real-root accuracy so far 536/587
+  1000/1000 done, real-root accuracy so far 598/657
+
+(a) real-root accuracy: 598/657 = 0.910 (PRD target 0.90) -> PASS
+(b) rootless accuracy (correct only if no root predicted): 0/343 = 0.000
+(c) combined: 598/1000 = 0.598
+real-root matches that relied on the weak-'#' wildcard: 23
+elapsed: 333.5s
+
+By gold pos_tag (real-root words):
+       N: 301/324 = 0.929
+       V: 219/254 = 0.862
+      PN: 38/38 = 1.000
+     ADJ: 32/32 = 1.000
+       T: 3/4 = 0.750
+     LOC: 4/4 = 1.000
+    INTG: 1/1 = 1.000
+
+Errors written to /tmp/opencode/sarf-remap-seed7.csv: 402 rows

@@ -26,6 +26,15 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["*"]
 
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.0-flash"
+    gemini_timeout_seconds: float = 20.0
+    gemini_max_retries: int = 2
+    gemini_retry_backoff_seconds: float = 0.5
+
+    farasa_url: str = "http://localhost:8765"
+    farasa_timeout_seconds: float = 10.0
+
     log_level: str = "INFO"
     log_json: bool = False
 

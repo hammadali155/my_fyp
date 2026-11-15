@@ -170,3 +170,41 @@ async def test_list_roots_ranked_with_filters(client: AsyncClient, seed_quran_da
 
     response = await client.get("/api/v1/quran/roots?limit=1")
     assert response.json()["total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_nahw_verse_annotations(client: AsyncClient, seed_quran_data, db_session):
+    from app.models.quran import NahwAnnotation
+
+    db_session.add(NahwAnnotation(verse_id=1, word_id=1, token_index=1, role="فاعل", dep_type="nsubj", head_index=-1, irab="مرفوع", sentence_index=1))
+    db_session.add(NahwAnnotation(verse_id=1, word_id=2, token_index=2, role="مفعول به", dep_type="dobj", head_index=1, irab="منصوب", sentence_index=1))
+    await db_session.commit()
+
+    response = await client.get("/api/v1/nahw/verse/1/1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["surah_number"] == 1
+    assert data["ayah_number"] == 1
+    assert len(data["tokens"]) == 2
+    first = data["tokens"][0]
+    assert first["role_ar"] == "فاعل"
+    assert first["role_key"] == "subject"
+    assert first["role_en"] == "Subject"
+    assert first["dep_type"] == "nsubj"
+    assert first["irab"] == "مرفوع"
+    assert first["head_index"] == -1
+    assert first["sentence_index"] == 1
+    assert first["text_uthmani"] == "بِسْمِ"
+    # second token depends on the first
+    assert data["tokens"][1]["role_key"] == "object"
+    assert data["tokens"][1]["head_index"] == 1
+
+
+@pytest.mark.asyncio
+async def test_nahw_verse_no_annotations_404(client: AsyncClient, seed_quran_data):
+    response = await client.get("/api/v1/nahw/verse/1/2")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["tokens"] == []
+    assert data["has_annotations"] is False
+    assert "No treebank data" in data["message"]

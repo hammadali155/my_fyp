@@ -1,0 +1,26 @@
+mode: analyzer-only (CAMeL plain analyzer)
+camel available: True
+lexicon ranking: on (train = odd-numbered surahs minus held-out surahs 100-114; 3087 lemma keys, 1304 root keys, 2970 lemma->root entries)
+held-out: surahs 100-114 (every eligible word; excluded from the lexicon)
+seed: 42; sample size: 352 of 352 eligible words
+skipped: 0 missing text, 0 missing gold root, 0 filtered by --pos, 0 filtered by --min-length
+sample: 232 real-root words, 120 rootless words (gold = ـ)
+  100/352 done, real-root accuracy so far 49/71
+  200/352 done, real-root accuracy so far 96/132
+  300/352 done, real-root accuracy so far 148/199
+
+(a) real-root accuracy: 172/232 = 0.741 (PRD target 0.90) -> BELOW TARGET
+(b) rootless accuracy (correct only if no root predicted): 3/120 = 0.025
+(c) combined: 175/352 = 0.497
+real-root matches that relied on the weak-'#' wildcard: 15
+elapsed: 4.7s
+
+By gold pos_tag (real-root words):
+       N: 102/138 = 0.739
+       V: 57/77 = 0.740
+     ADJ: 5/9 = 0.556
+      PN: 5/5 = 1.000
+       T: 2/2 = 1.000
+    INTG: 1/1 = 1.000
+
+Errors written to /tmp/opencode/sarf-heldout-plain-noremap.csv: 177 rows

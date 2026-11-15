@@ -218,6 +218,45 @@ def normalize_arabic(text: str) -> str:
     return cleaned.strip()
 
 
+ROOTLESS_PLACEHOLDER_ROOT = "ـ"
+
+
+def is_rootless_gold(gold: str | None) -> bool:
+    """True when the gold root marks a rootless word (EQTB placeholder `ـ`, or absent)."""
+    if gold is None:
+        return True
+    stripped = gold.strip()
+    return stripped == "" or all(ch == ROOTLESS_PLACEHOLDER_ROOT for ch in stripped)
+
+
+def score_root_prediction(gold: str | None, predicted_root: str | None) -> tuple[bool, bool]:
+    """Score one root prediction: returns ``(correct, relied_on_weak_wildcard)``.
+
+    Real gold root — correct when the normalised prediction equals the gold
+    root, or when only CAMeL's `#` weak-radical placeholders differ: a `#`
+    that survived `camel_service.convert_weak_placeholders` acts as a
+    wildcard matching any weak letter in that slot (every other slot must
+    match exactly). Reaching the wildcard branch implies a `#` was
+    decisive, so such a match reports ``relied_on_weak_wildcard=True``.
+
+    Rootless gold (placeholder `ـ`) — correct only when the prediction is
+    empty/None: the analyzer must abstain rather than invent a root.
+    """
+    if is_rootless_gold(gold):
+        return (predicted_root is None or predicted_root.strip() == "", False)
+    if gold is None or predicted_root is None or predicted_root.strip() == "":
+        return (False, False)
+    g = normalize_arabic(gold).replace(".", "")
+    p = normalize_arabic(predicted_root).replace(".", "")
+    if not g or not p:
+        return (False, False)
+    if g == p:
+        return (True, False)
+    if len(g) == len(p) and all(pc == gc or (pc == "#" and gc in WEAK_LETTERS) for gc, pc in zip(g, p, strict=True)):
+        return (True, True)
+    return (False, False)
+
+
 class MorphologyService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -265,11 +304,12 @@ class MorphologyService:
         stmt = (
             select(Word)
             .where(
-                (Word.text_imlaei == norm)
+                (Word.text_imlaei == word_raw)
+                | (Word.text_imlaei == norm)
                 | (Word.text_imlaei == stem)
                 | (Word.text_uthmani == word_raw)
             )
-            .limit(5)
+            .limit(10)
         )
         res = await self.db.execute(stmt)
         matched_words = res.scalars().all()
@@ -281,8 +321,15 @@ class MorphologyService:
         features_json: dict[str, Any] | None = None
 
         if matched_words:
-            # Pick first match with root populated
-            for mw in matched_words:
+            # Exact input matches (same spelling as the stored row) outrank
+            # stem-only matches: segment_clitics can strip a letter that is
+            # actually part of the root (بدْعًا -> stem دعا), and a stem match
+            # would otherwise win with an unrelated root.
+            exact_ids = {mw.id for mw in matched_words if mw.text_imlaei == word_raw or mw.text_uthmani == word_raw}
+            ordered = [mw for mw in matched_words if mw.id in exact_ids] + [
+                mw for mw in matched_words if mw.id not in exact_ids
+            ]
+            for mw in ordered:
                 if mw.root:
                     root = mw.root
                     lemma = mw.lemma
@@ -291,11 +338,11 @@ class MorphologyService:
                     features_json = mw.features_json
                     break
             if not root:
-                root = matched_words[0].root
-                lemma = matched_words[0].lemma
-                pos_tag = matched_words[0].pos_tag
-                pattern = matched_words[0].pattern
-                features_json = matched_words[0].features_json
+                root = ordered[0].root
+                lemma = ordered[0].lemma
+                pos_tag = ordered[0].pos_tag
+                pattern = ordered[0].pattern
+                features_json = ordered[0].features_json
 
         detected_form = None
         if root and len(root) == 3:

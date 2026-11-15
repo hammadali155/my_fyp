@@ -1,0 +1,29 @@
+mode: analyzer-only (CAMeL BERT disambiguator, whole-verse context) + train-split lemma->root remap
+camel available: True
+lexicon ranking: on (train = odd-numbered surahs minus held-out surahs 100-114; 3087 lemma keys, 1304 root keys, 2970 lemma->root entries)
+held-out: surahs 100-114 (every eligible word; excluded from the lexicon)
+seed: 42; sample size: 352 of 352 eligible words
+skipped: 0 missing text, 0 missing gold root, 0 filtered by --pos, 0 filtered by --min-length
+sample: 232 real-root words, 120 rootless words (gold = ـ)
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:   2%|▏         | 3/199 [00:00<00:10, 18.42it/s]Loading weights:   6%|▌         | 11/199 [00:00<00:04, 46.33it/s]Loading weights:   9%|▊         | 17/199 [00:00<00:05, 34.95it/s]Loading weights:  11%|█         | 22/199 [00:00<00:05, 32.90it/s]Loading weights:  13%|█▎        | 26/199 [00:00<00:05, 29.73it/s]Loading weights:  19%|█▉        | 38/199 [00:01<00:03, 48.09it/s]Loading weights:  28%|██▊       | 55/199 [00:01<00:01, 72.64it/s]Loading weights:  32%|███▏      | 64/199 [00:01<00:01, 76.23it/s]Loading weights:  37%|███▋      | 73/199 [00:01<00:02, 59.80it/s]Loading weights:  46%|████▌     | 91/199 [00:01<00:01, 82.46it/s]Loading weights:  57%|█████▋    | 114/199 [00:01<00:00, 112.12it/s]Loading weights:  64%|██████▍   | 127/199 [00:01<00:00, 106.56it/s]Loading weights: 100%|██████████| 199/199 [00:01<00:00, 106.15it/s]
+verse batching: 75 verses disambiguated in one call (301 sample words); 15 verses fell back to the single-word path (token-count mismatch, 51 sample words); 0 verses fell back (BERT verse call failed); 15 words fell back (missing/unusable position analysis)
+lemma-remap: 181 of 352 predictions had their root replaced from the train-split map
+  100/352 done, real-root accuracy so far 60/71
+  200/352 done, real-root accuracy so far 111/132
+  300/352 done, real-root accuracy so far 173/199
+
+(a) real-root accuracy: 202/232 = 0.871 (PRD target 0.90) -> BELOW TARGET
+(b) rootless accuracy (correct only if no root predicted): 0/120 = 0.000
+(c) combined: 202/352 = 0.574
+real-root matches that relied on the weak-'#' wildcard: 15
+elapsed: 117.0s
+
+By gold pos_tag (real-root words):
+       N: 124/138 = 0.899
+       V: 65/77 = 0.844
+     ADJ: 5/9 = 0.556
+      PN: 5/5 = 1.000
+       T: 2/2 = 1.000
+    INTG: 1/1 = 1.000
+
+Errors written to /tmp/opencode/sarf-heldout-bert-remap.csv: 150 rows

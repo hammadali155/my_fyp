@@ -23,6 +23,16 @@ from app.schemas.deck import (
     DeckStateCounts,
     DeckWordAddResponse,
 )
+from app.schemas.nahw import (
+    ExplainGrounding,
+    NahwExplainResponse,
+    NahwParseRequest,
+    NahwParseResponse,
+    NahwToken,
+    NahwVerseResponse,
+    TreebankRelation,
+    WordMorphology,
+)
 from app.schemas.progress import BadgeItem, BadgeListResponse
 from app.schemas.quran import (
     QuranSearchResponse,
@@ -83,4 +93,12 @@ __all__ = [
     "DeckWordAddResponse",
     "BadgeItem",
     "BadgeListResponse",
+    "NahwToken",
+    "NahwVerseResponse",
+    "NahwParseRequest",
+    "NahwParseResponse",
+    "WordMorphology",
+    "TreebankRelation",
+    "ExplainGrounding",
+    "NahwExplainResponse",
 ]
