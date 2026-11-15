@@ -171,6 +171,50 @@ Base URL: `/api/v1`
 | POST | `/nahw/parse` | Body: `{"text":"...", "is_quranic": true}` → tokens with POS + dependencies + Nahw roles |
 | GET | `/nahw/verse/{surah}:{ayah}` | Pre-analyzed annotation for a verse (from corpus) |
 
+> Note: the implemented route is `/nahw/verse/{surah_number}/{ayah_number}`
+> (slash form, consistent with `/quran/surahs/{n}/verses/{m}`). Each token
+> carries `role_ar` (EQTB label verbatim), `role_key` (UI legend colour key),
+> `role_en`, `dep_type` (raw EQTB relation), `irab` (مرفوع/منصوب/مجرور/مجزوم),
+> `head_index` (head word position, see below),
+> `head_surah_number` + `head_ayah_number` (the verse that position belongs to;
+> `null` whenever `head_index <= 0`) and `sentence_index` (EQTB sentence
+> grouping; one verse may contain several sentences, and a sentence may span
+> verse boundaries).
+>
+> `head_index` uses two sentinels because word positions are 1-based: `-1` means
+> there is no separate head word (the EQTB sentence root or a clitic attached to
+> the same word), and `0` means the head is an elided element the corpus records
+> as a placeholder (`(*)`, `word_id 0`), e.g. the `خبر` of `لا` in 2:2. Any value
+> `>= 1` is the head's word position inside `head_surah_number:head_ayah_number`.
+>
+> EQTB sentences can span verses (838 of 11,693; 1,064 head edges), so
+> `head_index` alone is ambiguous: 1:4 `مَٰلِكِ` heads to position 2 of 1:2,
+> while position 2 of 1:4 is `يَوْمِ`. Clients must resolve a head as
+> `(head_surah_number, head_ayah_number, head_index)` when the head verse is not
+> the token's own verse. Populated 2026-10-26 (migration `ce4c019d30bb`): 53,648
+> rows carry a head verse, 20,182 are `-1` and 3,599 are elided (`0`); every
+> `head_index >= 1` resolves inside its own head verse (0 exceptions).
+>
+> `POST /nahw/parse` matches the corpus first (`source: "corpus"`): exact
+> `text_uthmani`, then exact `text_imlaei`, then a diacritic-insensitive
+> comparison of the stored `text_imlaei`. Text that matches more than one verse
+> (271 verses share their exact text) returns `409` with the candidate
+> `surah:ayah` list — the API never guesses which verse was meant. Text sent
+> with `is_quranic: true` that is not in the corpus returns `404` instead of
+> being machine-parsed. Everything else is sent to the Farasa sidecar
+> (`source: "farasa"`): unreachable → `503`, malformed/empty payload → `502`.
+> The sidecar is **not deployed** as of 2026-10-21, so only the corpus path is
+> live — no rule-based parser is used to fake a free-text parse.
+>
+> `GET /nahw/explain/{word_id}` (login required) returns a plain-language i'rab
+> explanation grounded **only** in the stored `words` row, its
+> `nahw_annotations` relation and the surrounding verse text/translation from the
+> database. The prompt forbids inventing grammar or Quranic references, forbids
+> generating Quranic text, and requires an explicit "data unavailable" answer for
+> null fields. Gemini is called through `app/services/gemini_client.py`
+> (`GEMINI_API_KEY`); answers are cached in-process by `(word_id, language)`,
+> where `language` follows `users.ui_lang` (`ur` → Urdu, otherwise English).
+
 ### 4.5 AI Tutor
 | Method | Route | Description |
 |--------|-------|-------------|
@@ -215,7 +259,7 @@ Full schema in **Backend Schema** document. Entities:
 - `surahs` — id, number, name_ar, name_en, name_transliteration
 - `verses` — id, surah_id, ayah_number, text_uthmani, text_imlaei, translation_en, translation_ur
 - `words` — id, verse_id, position, token, diacritized, root, pattern, pos, morpheme_json
-- `nahw_annotations` — id, verse_id, token_index, role, head_index, dep_type (from corpus)
+- `nahw_annotations` — id, verse_id, word_id, token_index, role, dep_type, head_index, head_surah_number, head_ayah_number, irab, sentence_index (from EQTB)
 - `lessons` — id, title, level, module, sequence, content_json
 - `lesson_prerequisites` — lesson_id, requires_lesson_id
 - `user_lessons` — user_id, lesson_id, status, completed_at, score

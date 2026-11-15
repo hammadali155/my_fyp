@@ -50,7 +50,7 @@
 - **Size:** ~140,000 tokens, tens of MB.
 - **License/attribution:** CC BY 4.0 (Mendeley Data, no registration). Cite the EQTB paper.
 - **Mapping to `nahw_annotations`:** one EQTB token → one `nahw_annotations` row keyed by
-  `(verse_id, token_index)`; `role` ← syntactic relation label (classical term), `dep_type` ← raw label, `head_index` ← head token id, `irab` ← case feature (رفع/نصب/جر/جزم). Link `word_id` via `(verse, token_index)` ↔ `(verse_id, position)`.
+  `(verse_id, token_index)`; `role` ← syntactic relation label (classical term), `dep_type` ← raw label, `head_index` ← the head's word position (`-1` = no separate head word, `0` = elided head), `head_surah_number`/`head_ayah_number` ← the verse that head token belongs to (sentences may span verses), `irab` ← case feature (رفع/نصب/جر/جزم). Link `word_id` via `(verse, token_index)` ↔ `(verse_id, position)`.
 - **Count check:** ⚠ EQTB reports **77,439 words** and ~140,000 tokens vs our target of
   77,430 words; base text in EQTB states it was aligned to Tanzil/QADB with morpheme
   boundaries reconciled — expect a small (<100) join-key mismatch to investigate, not to

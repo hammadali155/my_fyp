@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import JSON, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -81,6 +81,7 @@ class NahwAnnotation(TimestampMixin, Base):
     __tablename__ = "nahw_annotations"
     __table_args__ = (
         UniqueConstraint("verse_id", "token_index", name="uq_nahw_verse_token"),
+        Index("ix_nahw_annotations_verse_sentence", "verse_id", "sentence_index"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -91,10 +92,13 @@ class NahwAnnotation(TimestampMixin, Base):
         ForeignKey("words.id", ondelete="SET NULL"), nullable=True, index=True
     )
     token_index: Mapped[int] = mapped_column(Integer, nullable=False)
-    role: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    dep_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    role: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    dep_type: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
     head_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    head_surah_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    head_ayah_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     irab: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    sentence_index: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
     verse: Mapped[Verse] = relationship()
     word: Mapped[Word | None] = relationship()

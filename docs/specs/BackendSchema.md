@@ -131,8 +131,11 @@ CREATE TABLE nahw_annotations (
     token_index  INTEGER NOT NULL,            -- position
     role         TEXT,                        -- فاعل / مفعول به / مبتدأ / خبر / نعت / حرف جر / ...
     dep_type     TEXT,                        -- raw dependency type (nsubj, dobj, ...)
-    head_index   INTEGER,                     -- index of head token (or -1 if sentence root)
+    head_index   INTEGER,                     -- head word position; -1 = no separate head, 0 = elided head
+    head_surah_number INTEGER,                -- verse the head position belongs to (NULL when head_index <= 0)
+    head_ayah_number  INTEGER,                --         "          (NULL when head_index <= 0)
     irab         TEXT,                        -- grammatical case (رفع/نصب/جر/جزم)
+    sentence_index INTEGER,                   -- EQTB sentence id (may span verses)
     UNIQUE (verse_id, token_index)
 );
 CREATE INDEX idx_nahw_verse ON nahw_annotations(verse_id);
@@ -337,7 +340,8 @@ ORDER BY v.surah_id, v.ayah_number, w.position;
 ### Verse annotation (Nahw)
 ```sql
 SELECT w.id, w.position, w.token_diacritized, w.root, w.pattern, w.pos,
-       n.role, n.dep_type, n.head_index, n.irab
+       n.role, n.dep_type, n.head_index, n.head_surah_number, n.head_ayah_number,
+       n.irab, n.sentence_index
 FROM words w
 LEFT JOIN nahw_annotations n ON n.verse_id = w.verse_id AND n.token_index = w.position
 WHERE w.verse_id = $1

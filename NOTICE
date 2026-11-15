@@ -1,0 +1,58 @@
+# NOTICE — Third-party data and attribution
+
+Jawhar redistributes corpus and annotation data from the sources below. Each
+entry states the source, its licence, and what this project changed.
+
+---
+
+## 1. Tanzil Project — Quranic text and translations
+
+- **Source:** https://tanzil.net (mirrors: King Fahd Complex, qul.tarteel.ai)
+- **Files used:** `quran-uthmani.txt`, `quran-imlaei.txt`,
+  `translation-en.txt` (Saheeh International), `translation-ur.txt`.
+- **Licence:** Creative Commons Attribution 3.0 (CC BY 3.0).
+- **Attribution:** "Tanzil Project" (https://tanzil.net).
+- **Changes:** verse text is stored byte-for-byte in `verses.text_uthmani` /
+  `verses.text_imlaei`; translations are stored as-is. No orthographic
+  normalisation is applied to the Quranic text.
+
+## 2. Extended Quranic Treebank (EQTB) — morphology and syntax
+
+- **Source:** *Quranic* dataset, Mendeley Data, version 1 (2025-04-25).
+  DOI: [10.17632/rk96pn66m4.1](https://doi.org/10.17632/rk96pn66m4.1)
+  — https://data.mendeley.com/datasets/rk96pn66m4/1
+- **Contributors:** Wadee A. Nashir, Wadee Alqubaty, Badriyya Al-onazi,
+  Asma Al-Shargabi, Mohamed Nour, Abdulqader Mohsen.
+- **File used:** `data/corpus/Quranic.csv` (extended CoNLL-X TSV, 139,376 data
+  rows, of which 11,157 are `word_id 0` sentence placeholders).
+- **Licence:** Creative Commons Attribution 4.0 (CC BY 4.0)
+  — https://creativecommons.org/licenses/by/4.0/
+- **Attribution:** please cite the dataset above (DOI
+  `10.17632/rk96pn66m4.1`) and credit the contributors named above.
+- **Changes made by Jawhar:**
+  - the word- and segment-level rows are grouped into one row per orthographic
+    word and re-keyed into the `words` and `nahw_annotations` SQL tables;
+  - EQTB's sentence-scoped head references (`ref_token_id`) are resolved into
+    word-level `head_index` values, with sentence roots / own-word prefixes /
+    elided elements stored as `-1`;
+  - EQTB's case and mood shorthand (`NOM`/`ACC`/`GEN`, `MOOD:SUBJ`/`MOOD:JUS`)
+    is translated to the classical Arabic terms مرفوع/منصوب/مجرور/مجزوم;
+  - one column (`sentence_index`) is added to preserve EQTB's sentence grouping.
+  - No annotation text or label is paraphrased: `role` and `dep_type` store
+    EQTB's `rel_label_ar` / `rel_label` verbatim.
+- **Note from the dataset authors:** the syntactic layer was produced by a
+  BiLSTM parser and validated against expert i'rab references, but "awaits
+  further exhaustive manual curation to reach definitive gold-standard status".
+  Jawhar treats it as the best available machine-validated annotation, not as
+  infallible gold.
+
+## 3. Quranic Arabic Corpus — morphology
+
+- **Source:** https://corpus.quran.com (Kais Dukes), file
+  `quranic-corpus-morphology-0.4.txt`.
+- **Licence:** GNU General Public License (per the Quranic Arabic Corpus).
+- **Usage in Jawhar:** read at ingest time as a fallback source for
+  `words` morphology fields; where the Extended Quranic Treebank (entry 2) has a
+  value for the same word, the EQTB value is stored and the QAC value is only
+  kept inside `words.features_json["segments"]`. The GPL file itself is not
+  redistributed by this repository.

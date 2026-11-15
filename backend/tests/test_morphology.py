@@ -420,3 +420,63 @@ async def test_patterns_returns_verb_forms_and_noun_patterns(client: AsyncClient
     hamd = next(p for p in data["noun_patterns"] if p["pattern"] == "فَعْل")
     assert hamd["example"] is not None
     assert hamd["example"]["lemma"] == "حَمْد"
+
+
+# ---------------------------------------------------------------------------
+# Nahw dependency-label mapping (table-driven)
+# ---------------------------------------------------------------------------
+
+from app.services.nahw_mapping import (  # noqa: E402
+    _DEP_TO_ROLE,
+    dep_label_to_role,
+    normalize_dep_label,
+)
+
+
+@pytest.mark.parametrize("label,key,role_ar", [
+    ("Subj", "subject", "فاعل"),
+    ("subj", "subject", "فاعل"),
+    ("SUBJ", "subject", "فاعل"),
+    ("subj <<an>>", "subject", "فاعل"),
+    ("subj <<kan>>", "subject", "فاعل"),
+    ("Obj", "object", "مفعول به"),
+    ("OBJ", "object", "مفعول به"),
+    ("Pred", "khabar", "خبر"),
+    ("pred", "khabar", "خبر"),
+    ("pred <<kan>>", "khabar", "خبر"),
+    ("Pred<<in>>", "khabar", "خبر"),
+    ("Adj", "adjective", "نعت"),
+    ("NMOD", "adjective", "نعت"),
+    ("nmod", "adjective", "نعت"),
+    ("circ", "circumstantial", "حال"),
+    ("CIRC", "circumstantial", "حال"),
+    ("preposition", "preposition", "حرف جر"),
+    ("zarf", "adverb", "ظرف"),
+    ("gen", "other", "غير محدد"),
+    ("link", "other", "غير محدد"),
+    ("root", "other", "غير محدد"),
+    ("NonRel", "other", "غير محدد"),
+    ("conj", "other", "غير محدد"),
+    ("", "other", "غير محدد"),
+    (None, "other", "غير محدد"),
+    ("whatever", "other", "غير محدد"),
+])
+def test_dep_label_to_role(label, key, role_ar):
+    role = dep_label_to_role(label)
+    assert role.role_key == key, f"{label!r} -> key {role.role_key}, expected {key}"
+    assert role.role_ar == role_ar
+
+
+def test_dep_label_mapping_table_is_consistent():
+    for _key, role in _DEP_TO_ROLE.items():
+        assert role.role_key in (
+            "subject", "object", "mubtada", "khabar", "adjective", "preposition", "adverb", "circumstantial", "other"
+        )
+        assert role.role_en
+        assert role.role_ar
+
+
+def test_normalize_dep_label():
+    assert normalize_dep_label("  Subj <<kan>> ") == "subj"
+    assert normalize_dep_label("NMOD") == "nmod"
+    assert normalize_dep_label("subj_<<kan>>") == "subj"
