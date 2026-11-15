@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 _HEAD_INDEX_DESCRIPTION = (
@@ -41,3 +43,50 @@ class NahwParseRequest(BaseModel):
 class NahwParseResponse(BaseModel):
     source: str
     tokens: list[NahwToken]
+
+
+class WordMorphology(BaseModel):
+    text_uthmani: str
+    text_imlaei: str | None = None
+    root: str | None = None
+    lemma: str | None = None
+    pos_tag: str | None = None
+    pattern: str | None = None
+    tense: str | None = None
+    voice: str | None = None
+    gender: str | None = None
+    number: str | None = None
+    person: str | None = None
+    features_json: dict[str, Any] | None = None
+
+
+class TreebankRelation(BaseModel):
+    role: str | None = None
+    dep_type: str | None = None
+    head_index: int | None = Field(default=None, description=_HEAD_INDEX_DESCRIPTION)
+    head_surah_number: int | None = None
+    head_ayah_number: int | None = None
+    irab: str | None = None
+    sentence_index: int | None = None
+
+
+class ExplainGrounding(BaseModel):
+    word_id: int
+    position: int
+    surah_number: int
+    ayah_number: int
+    verse_text: str
+    translation: str | None = None
+    morphology: WordMorphology
+    relation: TreebankRelation | None = None
+    missing_data: list[str] = []
+
+
+class NahwExplainResponse(BaseModel):
+    word_id: int
+    language: str
+    source: str
+    explanation: str
+    cached: bool = False
+    grounding: ExplainGrounding
+

@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.core.deps import DbSession
+from app.core.deps import CurrentUser, DbSession
 from app.core.logging import get_logger
 from app.schemas.nahw import (
+    NahwExplainResponse,
     NahwParseRequest,
     NahwParseResponse,
     NahwVerseResponse,
 )
+from app.services.gemini_client import GeminiClientDep
+from app.services.nahw_explain_service import NahwExplainService, normalize_language
 from app.services.nahw_service import NahwService
 
 router = APIRouter(prefix="/nahw", tags=["Nahw (Syntax)"])
@@ -54,3 +57,19 @@ async def get_verse_annotations(
         tokens=tokens,
         has_annotations=True,
     )
+
+
+@router.get(
+    "/explain/{word_id}",
+    response_model=NahwExplainResponse,
+    summary="Explain one word's i'rab grounded in stored word, verse and treebank data",
+)
+async def explain_word(
+    word_id: int,
+    db: DbSession,
+    current_user: CurrentUser,
+    gemini: GeminiClientDep,
+) -> NahwExplainResponse:
+    service = NahwExplainService(db, gemini)
+    language = normalize_language(current_user.ui_lang)
+    return await service.explain(word_id, language)

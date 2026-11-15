@@ -24,10 +24,14 @@ from app.schemas.deck import (
     DeckWordAddResponse,
 )
 from app.schemas.nahw import (
+    ExplainGrounding,
+    NahwExplainResponse,
     NahwParseRequest,
     NahwParseResponse,
     NahwToken,
     NahwVerseResponse,
+    TreebankRelation,
+    WordMorphology,
 )
 from app.schemas.progress import BadgeItem, BadgeListResponse
 from app.schemas.quran import (
@@ -93,4 +97,8 @@ __all__ = [
     "NahwVerseResponse",
     "NahwParseRequest",
     "NahwParseResponse",
+    "WordMorphology",
+    "TreebankRelation",
+    "ExplainGrounding",
+    "NahwExplainResponse",
 ]
