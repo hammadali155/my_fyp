@@ -26,6 +26,9 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["*"]
 
+    farasa_url: str = "http://localhost:8765"
+    farasa_timeout_seconds: float = 10.0
+
     log_level: str = "INFO"
     log_json: bool = False
 
