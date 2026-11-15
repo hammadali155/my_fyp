@@ -60,6 +60,7 @@ from app.db.base import Base  # noqa: E402
 from app.db.seed_data import SURAHS_DATA  # noqa: E402
 from app.db.session import async_session_factory, engine  # noqa: E402
 from app.models.quran import NahwAnnotation, Surah, Verse, Word  # noqa: E402
+from app.services.nahw_backfill import derive_word_annotations  # noqa: E402
 
 logger = get_logger("scripts.ingest_quran")
 
@@ -220,7 +221,10 @@ def parse_eqtb(path: Path) -> tuple[dict[tuple[int, int, int], dict[str, object]
     Returns (words, nahw_rows):
     * words: {(surah, ayah, word): {...}} — one entry per orthographic word;
       ``text`` is the concatenation of the word's segment Uthmani tokens.
-    * nahw_rows: one row per word, shaped like parse_nahw output.
+    * nahw_rows: one row per word, shaped like parse_nahw output, with
+      ``head_index``/``sentence_index``/``irab`` derived by
+      :func:`app.services.nahw_backfill.derive_word_annotations` (EQTB head
+      references are sentence-scoped, so a sentence may span verse boundaries).
     """
     import csv
 
@@ -231,13 +235,21 @@ def parse_eqtb(path: Path) -> tuple[dict[tuple[int, int, int], dict[str, object]
         return words, nahw_rows
 
     grouped: dict[tuple[int, int, int], list[dict[str, str]]] = defaultdict(list)
+    raw_rows: list[dict[str, str]] = []
     with path.open(encoding="utf-16", newline="") as fh:
         reader = csv.DictReader(fh, delimiter="\t")
         for row in reader:
             if row["word_id"] == "0":  # sentence-level placeholder rows
+                raw_rows.append(row)
                 continue
+            raw_rows.append(row)
             key = (int(row["chapter_id"]), int(row["verse_id"]), int(row["word_id"]))
             grouped[key].append(row)
+
+    derived = {
+        (a.surah, a.ayah, a.position): a
+        for a in derive_word_annotations(raw_rows)
+    }
 
     for (s, a, w), rows in grouped.items():
         rows.sort(key=lambda r: int(r["tok_id"]))
@@ -263,15 +275,19 @@ def parse_eqtb(path: Path) -> tuple[dict[tuple[int, int, int], dict[str, object]
                 for r in rows
             ],
         }
+        row = derived.get((s, a, w))
         nahw_rows.append(
             {
                 "surah": str(s),
                 "ayah": str(a),
                 "token_index": str(w),
-                "role": stem["rel_label_ar"] or stem["rel_label"],
-                "dep_type": stem["rel_label"],
-                "head_index": "",
-                "irab": stem["nominal_case"] if stem["nominal_case"] != "_" else "",
+                "role": (row.role if row else stem["rel_label_ar"] or stem["rel_label"]),
+                "dep_type": (row.dep_type if row else stem["rel_label"]),
+                "head_index": str(row.head_index) if row else "",
+                "head_surah": str(row.head_surah) if row and row.head_surah is not None else "",
+                "head_ayah": str(row.head_ayah) if row and row.head_ayah is not None else "",
+                "irab": (row.irab or "") if row else "",
+                "sentence_index": str(row.sentence_index) if row else "",
             }
         )
     return words, nahw_rows
@@ -508,6 +524,9 @@ async def ingest(
         if (verse_id, token_index) in nahw_keys:
             continue
         head = row.get("head_index", "").strip()
+        head_surah = row.get("head_surah", "").strip()
+        head_ayah = row.get("head_ayah", "").strip()
+        sentence = row.get("sentence_index", "").strip()
         annotation = NahwAnnotation(
             verse_id=verse_id,
             word_id=word_pk.get((verse_id, token_index)),
@@ -515,7 +534,10 @@ async def ingest(
             role=row.get("role", "").strip() or None,
             dep_type=row.get("dep_type", "").strip() or None,
             head_index=int(head) if head.lstrip("-").isdigit() else None,
+            head_surah_number=int(head_surah) if head_surah.isdigit() else None,
+            head_ayah_number=int(head_ayah) if head_ayah.isdigit() else None,
             irab=row.get("irab", "").strip() or None,
+            sentence_index=int(sentence) if sentence.isdigit() else None,
         )
         session.add(annotation)
         inserted["nahw_annotations"] += 1
