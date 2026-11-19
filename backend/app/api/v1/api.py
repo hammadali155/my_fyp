@@ -11,6 +11,7 @@ from app.api.v1.nahw import router as nahw_router
 from app.api.v1.progress import router as progress_router
 from app.api.v1.quran import router as quran_router
 from app.api.v1.srs import router as srs_router
+from app.api.v1.tutor import router as tutor_router
 
 api_router = APIRouter()
 
@@ -23,3 +24,4 @@ api_router.include_router(nahw_router)
 api_router.include_router(quran_router)
 api_router.include_router(morphology_router)
 api_router.include_router(srs_router)
+api_router.include_router(tutor_router)
