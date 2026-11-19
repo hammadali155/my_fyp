@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     gemini_max_retries: int = 2
     gemini_retry_backoff_seconds: float = 0.5
 
+    tutor_context_max_chars: int = 6000
+    tutor_daily_message_limit: int = 40
+    tutor_history_max_tokens: int = 2000
+
     farasa_url: str = "http://localhost:8765"
     farasa_timeout_seconds: float = 10.0
 
