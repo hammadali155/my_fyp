@@ -10,7 +10,7 @@ from app.schemas.nahw import (
     NahwParseResponse,
     NahwVerseResponse,
 )
-from app.services.gemini_client import GeminiClientDep
+from app.services.llm_client import LLMClientDep
 from app.services.nahw_explain_service import NahwExplainService, normalize_language
 from app.services.nahw_service import NahwService
 
@@ -68,8 +68,8 @@ async def explain_word(
     word_id: int,
     db: DbSession,
     current_user: CurrentUser,
-    gemini: GeminiClientDep,
+    llm: LLMClientDep,
 ) -> NahwExplainResponse:
-    service = NahwExplainService(db, gemini)
+    service = NahwExplainService(db, llm)
     language = normalize_language(current_user.ui_lang)
     return await service.explain(word_id, language)
