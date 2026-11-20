@@ -33,6 +33,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.meher.jawhar.data.LocalApi
 import com.meher.jawhar.data.api.me
+import com.meher.jawhar.data.api.NahwParseResponseDto
+import com.meher.jawhar.data.api.nahwVerse
 import com.meher.jawhar.data.api.srsDue
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
@@ -50,6 +52,7 @@ fun HomeScreen() {
     var xp by remember { mutableStateOf(0) }
     var dueCount by remember { mutableStateOf(0) }
     var newCount by remember { mutableStateOf(0) }
+    var apiFailed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         try {
@@ -57,12 +60,13 @@ fun HomeScreen() {
             userName = user.name.split(" ").first()
             streak = user.streak_days
             xp = user.xp
-        } catch (e: Exception) { }
-        try {
             val due = api.srsDue()
             dueCount = due.size
             newCount = due.count { it.new_card }
-        } catch (e: Exception) { }
+            apiFailed = false
+        } catch (e: Exception) {
+            apiFailed = true
+        }
     }
 
     Page(
@@ -81,7 +85,13 @@ fun HomeScreen() {
             }
         },
     ) {
-        Column {
+        if (apiFailed) {
+            Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load your progress", "Jawhar couldn't reach the server. Check your connection and try again.")
+                JButton("Try again", { apiFailed = false }, Modifier.align(Alignment.CenterHorizontally).size(150.dp, 44.dp), JButtonStyle.Tonal, height = 44.dp)
+            }
+        } else {
+            Column {
             JText("As-salamu alaykum,", t.bodyL, c.onSurfaceVariant)
             JText(userName, t.headlineL, c.onSurface)
         }
@@ -129,6 +139,7 @@ fun HomeScreen() {
             JText("DAILY CHALLENGE", t.labelS, c.onAccentContainer)
             JText("Analyse 3 verbs from Surah Al-Fatiha", t.titleM, c.onSurface)
             JText("+50 XP", t.labelL, c.onAccentContainer)
+        }
         }
     }
 }
@@ -350,20 +361,45 @@ fun DailyChallengeScreen() {
     val c = Jawhar.colors
     val t = Jawhar.type
     val nav = LocalNav.current
+    val api = LocalApi.current
+    var verse by remember { mutableStateOf<NahwParseResponseDto?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        loading = true
+        try {
+            val v = api.nahwVerse(1, 2)
+            verse = NahwParseResponseDto(source = "corpus", tokens = v.tokens)
+        } catch (e: Exception) {
+            error = true
+        } finally {
+            loading = false
+        }
+    }
+
     Page {
         BigTitle("Daily challenge")
         JTag("Resets in 6h 12m", background = c.accentContainer, color = c.onAccentContainer, icon = JI.Clock, height = 36.dp)
-        HeroCard(color = c.accentContainer, starColor = c.accent, stars = listOf(StarSpec(330.dp, 20.dp, 220.dp, 0.3f))) {
-            JText("TODAY", t.labelS, c.onAccentContainer)
-            JText("Parse the ayah", t.headlineM, c.onSurface)
-            JText("Analyse the four words of Al-Fatiha 1:2 and tag each grammatical role.", t.bodyM, c.onSurfaceVariant, Modifier.padding(top = 8.dp))
-            Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                JProgressBar(0.25f, Modifier.weight(1f), track = c.bgSurface, fill = c.onAccentContainer)
-                JText("1 of 4 words", t.labelM, c.onAccentContainer)
+        if (loading) {
+            JSkeleton(Modifier.fillMaxWidth().height(216.dp), radius = 34.dp)
+        } else if (error) {
+            Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                StateScreen(JI.Alert, c.errorContainer, c.error, "Could not load today's challenge", "Check your connection and try again.", "Try again", onPrimary = { loading = true; error = false }, back = true)
             }
-            Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                JButton("Continue", { nav.go(Dest.NahwResult) }, Modifier.width(120.dp), JButtonStyle.Accent, height = 36.dp)
-                JTag("+50 XP", background = c.bgSurface, color = c.onAccentContainer, height = 36.dp)
+        } else {
+            HeroCard(color = c.accentContainer, starColor = c.accent, stars = listOf(StarSpec(330.dp, 20.dp, 220.dp, 0.3f))) {
+                JText("TODAY", t.labelS, c.onAccentContainer)
+                JText("Parse the ayah", t.headlineM, c.onSurface)
+                JText("Analyse the ${verse?.tokens?.size ?: 0} words of Al-Fatiha 1:2 and tag each grammatical role.", t.bodyM, c.onSurfaceVariant, Modifier.padding(top = 8.dp))
+                Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    JProgressBar(0.25f, Modifier.weight(1f), track = c.bgSurface, fill = c.onAccentContainer)
+                    JText("1 of 4 words", t.labelM, c.onAccentContainer)
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    JButton("Continue", { nav.go(Dest.NahwResult, verse) }, Modifier.width(120.dp), JButtonStyle.Accent, height = 36.dp)
+                    JTag("+50 XP", background = c.bgSurface, color = c.onAccentContainer, height = 36.dp)
+                }
             }
         }
         SectionTitle("More challenges")

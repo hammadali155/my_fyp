@@ -10,8 +10,10 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.meher.jawhar.data.AppState
 import com.meher.jawhar.data.LocalApi
+import com.meher.jawhar.data.ThemeMode
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.JNav
@@ -41,7 +44,13 @@ private val activeCatalog: Map<String, ScreenSpec>
 @Preview
 @DevelopmentEntryPoint
 fun App() {
-    JawharTheme {
+    val systemDark = isSystemInDarkTheme()
+    val dark = when (AppState.themeMode) {
+        ThemeMode.System -> systemDark
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+    }
+    JawharTheme(dark = dark) {
         val nav = remember { JNav(Dest.Splash) }
         val session = remember { ScreenSession() }
         val canHandleBack = nav.canGoBack || (nav.current in Dest.TabDestinations && nav.current != Dest.Home)
