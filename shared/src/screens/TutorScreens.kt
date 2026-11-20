@@ -1,6 +1,9 @@
 package com.meher.jawhar.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -17,8 +20,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +31,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import com.meher.jawhar.data.LocalApi
+import com.meher.jawhar.data.api.TutorReferenceDto
+import com.meher.jawhar.data.api.TutorSessionSummaryDto
+import com.meher.jawhar.data.api.tutorChat
+import com.meher.jawhar.data.api.tutorDeleteSession
+import com.meher.jawhar.data.api.tutorSessions
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.LocalNav
@@ -69,40 +81,151 @@ fun BoxScope.Composer(value: String, onValueChange: (String) -> Unit) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TutorChatScreen(error: Boolean = false) {
+fun TutorChatScreen() {
+    val nav = LocalNav.current
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
+    val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf("") }
-    Page(back = false, tab = JTab.Tutor, title = "AI Tutor", right = JI.More, overlay = { Composer(draft) { draft = it } }) {
-        if (error) {
-            JChatBubble("Why is رَبِّ in the genitive case?", true)
-            Column(Modifier.fillMaxWidth().clip(SquircleShape(6.dp, 24.dp, 24.dp, 24.dp)).background(c.errorContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    JIcon(JI.Alert, size = 22.dp, tint = c.error)
-                    JText("The reply did not come through", t.titleS, c.onSurface)
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+    var messages by remember { mutableStateOf<List<Pair<String, Boolean>>>(emptyList()) }
+    var sessionId by remember { mutableStateOf<Int?>(null) }
+
+    val reference = nav.currentArg as? TutorReferenceDto
+
+    LaunchedEffect(reference) {
+        if (reference != null && messages.isEmpty()) {
+            scope.launch {
+                loading = true
+                try {
+                    val res = api.tutorChat(
+                        "Explain this word and its grammar in the Quran",
+                        sessionId,
+                        reference,
+                    )
+                    sessionId = res.session_id
+                    messages = messages + listOf(
+                        "Tell me about this word" to true,
+                        res.reply to false,
+                    )
+                } catch (e: Exception) {
+                    error = true
+                    errorMessage = e.message ?: "Could not load tutor response"
+                } finally {
+                    loading = false
                 }
-                JText("The tutor lost the connection while answering.", t.bodyS, c.onSurfaceVariant)
-                JButton("Retry", {}, Modifier.size(96.dp, 30.dp), height = 30.dp)
+            }
+        }
+    }
+
+    fun onSend() {
+        val msg = draft.trim()
+        if (msg.isEmpty() || loading) return
+        draft = ""
+        val userMsg = msg to true
+        messages = messages + userMsg
+        scope.launch {
+            loading = true
+            try {
+                val res = api.tutorChat(msg, sessionId, null)
+                sessionId = res.session_id
+                messages = messages + (res.reply to false)
+            } catch (e: Exception) {
+                error = true
+                errorMessage = e.message ?: "The tutor did not respond"
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    Page(
+        back = false,
+        tab = JTab.Tutor,
+        title = "AI Tutor",
+        right = JI.More,
+        scroll = false,
+    ) {
+        if (error) {
+            Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                StateScreen(JI.Alert, c.errorContainer, c.error, "Could not connect to tutor", errorMessage, "Try again", onPrimary = { loading = true; error = false }, back = true)
+            }
+        } else if (messages.isEmpty() && !loading) {
+            Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                StateScreen(JI.Tutor, c.infoContainer, c.info, "Start a conversation", "Ask anything about the Quran, Arabic grammar, or word meanings.", "New chat", onPrimary = { }, back = false)
             }
         } else {
-            Mock.chat.forEach { JChatBubble(it.text, it.fromUser) }
-            JCard(Modifier.fillMaxWidth(0.88f), color = c.infoContainer, padding = 20.dp) {
-                JText("KEY CONCEPT", t.labelS, c.info)
-                JArabic("ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", t.arabicQuranM, c.onSurface, Modifier.fillMaxWidth(), TextAlign.Start)
-                listOf("Root" to "ر ح م", "Pattern" to "فَعْلَان", "Meaning" to "Most Gracious").forEach { (a, b) ->
-                    Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                        JText(a, t.labelM, c.onSurfaceVariant, Modifier.weight(1f))
-                        JText(b, t.titleS, c.onSurface)
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (loading) {
+                    JSkeleton(Modifier.fillMaxWidth().height(80.dp), radius = 24.dp)
+                    JSkeleton(Modifier.fillMaxWidth(0.7f).height(40.dp), radius = 20.dp)
+                }
+                messages.forEachIndexed { index, (text, fromUser) ->
+                    val isLastLoading = loading && index == messages.lastIndex
+                    JChatBubble(text, fromUser)
+                    if (isLastLoading) {
+                        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            repeat(3) { Box(Modifier.size(7.dp).clip(CircleShape).background(c.onSurfaceSubtle.copy(alpha = 0.5f + it * 0.2f))) }
+                        }
                     }
                 }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    JChip("Show the word family", false, {})
+                    JChip("Quiz me", false, {})
+                }
+                Spacer(Modifier.height(100.dp))
             }
-            Row(Modifier.clip(SquircleShape(6.dp, 20.dp, 20.dp, 20.dp)).background(c.bgSurfaceVariant).padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                repeat(3) { Box(Modifier.size(7.dp).clip(CircleShape).background(c.onSurfaceSubtle.copy(alpha = 0.5f + it * 0.2f))) }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                JChip("Show the word family", false, {})
-                JChip("Quiz me", false, {})
-            }
+        }
+        TutorInputBar(draft = draft, onValueChange = { draft = it }, onSend = ::onSend, loading = loading, c = c, t = t)
+    }
+}
+
+@Composable
+fun TutorInputBar(
+    draft: String,
+    onValueChange: (String) -> Unit,
+    onSend: () -> Unit,
+    loading: Boolean,
+    c: JawharColors,
+    t: JawharType,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .background(c.bgSurface.copy(alpha = 0.95f))
+            .clip(CapsuleShape)
+            .softShadow(CapsuleShape, 14.dp, 0.3f),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        BasicTextField(
+            value = draft,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = t.bodyM.copy(color = c.onSurface),
+            cursorBrush = SolidColor(c.primary),
+            modifier = Modifier.fillMaxWidth(),
+            decorationBox = { inner ->
+                Box(contentAlignment = Alignment.CenterStart) {
+                    if (draft.isEmpty()) JText("Ask the tutor anything", t.bodyM, c.onSurfaceSubtle)
+                    inner()
+                }
+            },
+        )
+        JIcon(JI.Mic, size = 22.dp, tint = c.onSurfaceVariant)
+        Box(
+            Modifier.size(44.dp).clip(CircleShape).background(c.primary).tappable(onClick = { onSend() }),
+            contentAlignment = Alignment.Center,
+        ) {
+            JIcon(JI.Send, size = 20.dp, tint = c.onPrimary)
         }
     }
 }
@@ -139,27 +262,68 @@ fun TutorStartScreen() {
 }
 
 @Composable
-fun TutorHistoryScreen(empty: Boolean = false) {
+fun TutorHistoryScreen() {
     val nav = LocalNav.current
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
+    val scope = rememberCoroutineScope()
+    var sessions by remember { mutableStateOf<List<TutorSessionSummaryDto>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        try {
+            sessions = api.tutorSessions().sessions
+            error = false
+        } catch (e: Exception) {
+            error = true
+            errorMessage = e.message ?: "Could not load chats"
+        } finally {
+            loading = false
+        }
+    }
+
+    fun onDelete(sessionId: Int) {
+        scope.launch {
+            try {
+                api.tutorDeleteSession(sessionId)
+                sessions = sessions.filter { it.id != sessionId }
+            } catch (e: Exception) {
+                errorMessage = e.message ?: "Could not delete chat"
+                error = true
+            }
+        }
+    }
+
     Page(title = "Past chats", right = JI.Search) {
-        if (empty) {
-            Spacer(Modifier.height(60.dp))
-            JCenterState(JI.Tutor, c.infoContainer, c.info, "No chats yet", "Your conversations with the tutor will appear here.")
-            JButton("Start a chat", { nav.go(Dest.TutorChat) }, Modifier.align(Alignment.CenterHorizontally).size(150.dp, 44.dp), JButtonStyle.Tonal, height = 44.dp)
+        if (error) {
+            Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                StateScreen(JI.Alert, c.errorContainer, c.error, "Could not load chats", errorMessage, "Try again", onPrimary = { loading = true; error = false }, back = true)
+            }
+        } else if (loading) {
+            repeat(4) { JSkeleton(Modifier.fillMaxWidth().height(64.dp), radius = 20.dp) }
+        } else if (sessions.isEmpty()) {
+            StateScreen(JI.Tutor, c.infoContainer, c.info, "No chats yet", "Your conversations with the tutor will appear here.", "Start a chat", onPrimary = { nav.go(Dest.TutorChat) }, back = false)
         } else {
-            JSectionLabel("Today")
-            listOf("The root of الرَّحْمَٰن" to "4 messages · 8:12 PM", "Why is رَبِّ in the genitive?" to "6 messages · 2:40 PM").forEach { (a, b) -> HistoryRow(a, b) }
-            JSectionLabel("This week")
-            listOf("Quiz: Form I verbs" to "10 messages · Mon", "Explain i'rab of Al-Fatiha 1:2" to "5 messages · Sun").forEach { (a, b) -> HistoryRow(a, b) }
+            sessions.forEach { s ->
+                JListItem(
+                    s.title,
+                    subtitle = "${s.message_count} messages · ${s.updated_at.take(5)}",
+                    icon = JI.Tutor,
+                    onClick = { nav.go(Dest.TutorChat) },
+                    trailing = {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            JIcon(JI.Chevron, size = 20.dp, tint = c.onSurfaceSubtle)
+                            Box(Modifier.size(32.dp).clip(CircleShape).background(c.errorContainer).tappable(onClick = { onDelete(s.id) }), contentAlignment = Alignment.Center) {
+                                JIcon(JI.Trash, size = 16.dp, tint = c.error)
+                            }
+                        }
+                    },
+                )
+            }
             JText("Swipe left on a chat to delete it", t.bodyS, c.onSurfaceSubtle, Modifier.fillMaxWidth(), TextAlign.Center)
         }
     }
-}
-
-@Composable
-private fun HistoryRow(title: String, meta: String) {
-    val nav = LocalNav.current
-    JListItem(title, subtitle = meta, onClick = { nav.go(Dest.TutorChat) })
 }

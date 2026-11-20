@@ -226,3 +226,252 @@ data class RegisterRequestDto(
     val ui_lang: String = "en",
     val level: String = "beginner",
 )
+
+@Serializable
+data class RefreshTokenRequestDto(val refresh_token: String)
+
+@Serializable
+data class UserUpdateRequestDto(
+    val name: String? = null,
+    val native_lang: String? = null,
+    val ui_lang: String? = null,
+    val level: String? = null,
+    val learning_goal: String? = null,
+)
+
+@Serializable
+data class MessageResponseDto(val message: String)
+
+// ---------- Bookmarks ----------
+
+@Serializable
+data class BookmarkCreateDto(val verse_id: Int, val note: String? = null, val collection: String? = null)
+
+@Serializable
+data class BookmarkResponseDto(
+    val id: Int,
+    val verse_id: Int,
+    val note: String? = null,
+    val collection: String? = null,
+    val created_at: String,
+    val updated_at: String,
+    val surah_number: Int? = null,
+    val ayah_number: Int? = null,
+)
+
+@Serializable
+data class BookmarkListResponseDto(val items: List<BookmarkResponseDto>, val total: Int)
+
+// ---------- Decks ----------
+
+@Serializable
+data class DeckCreateDto(val name: String)
+
+@Serializable
+data class AddWordRequestDto(val word_id: Int)
+
+@Serializable
+data class BulkAddWordsRequestDto(val word_ids: List<Int>)
+
+@Serializable
+data class DeckWordAddResponseDto(val added: Int, val skipped_duplicates: Int, val card_ids: List<Int>)
+
+// ---------- Morphology (extra fields not in existing DTOs) ----------
+
+@Serializable
+data class CliticDetailDto(val clitic: String, val meaning: String, val type: String)
+
+@Serializable
+data class SegmentationDetailDto(
+    val original: String,
+    val normalized: String,
+    val prefix: CliticDetailDto?,
+    val stem: String,
+    val suffix: CliticDetailDto?,
+)
+
+@Serializable
+data class MorphologyAnalyzeResponseDto(
+    val word: String,
+    val normalized: String,
+    val segmentation: SegmentationDetailDto?,
+    val root: String?,
+    val lemma: String?,
+    val pos_tag: String?,
+    val detected_form: VerbFormDto?,
+    val is_quranic: Boolean,
+    val source: String?,
+    val pattern: String?,
+    val features_json: Map<String, JsonElement>?,
+)
+
+@Serializable
+data class LemmaCountDto(val lemma: String, val count: Int)
+
+@Serializable
+data class RootCitationDto(
+    val surah_number: Int,
+    val surah_name: String,
+    val surah_name_arabic: String,
+    val ayah_number: Int,
+    val word_position: Int,
+    val word_text: String,
+    val verse_text: String,
+    val verse_translation_en: String?,
+)
+
+@Serializable
+data class RootConcordanceResponseDto(
+    val root: String,
+    val total_occurrences: Int,
+    val distinct_lemmas: List<LemmaCountDto>,
+    val citations: List<RootCitationDto>,
+)
+
+// ---------- Nahw ----------
+
+@Serializable
+data class NahwTokenDto(
+    val position: Int,
+    val text_uthmani: String,
+    val role_ar: String?,
+    val role_en: String,
+    val role_key: String,
+    val dep_type: String?,
+    val irab: String?,
+    val head_index: Int?,
+    val head_surah_number: Int?,
+    val head_ayah_number: Int?,
+    val sentence_index: Int?,
+)
+
+@Serializable
+data class NahwVerseResponseDto(
+    val surah_number: Int,
+    val ayah_number: Int,
+    val tokens: List<NahwTokenDto>,
+    val has_annotations: Boolean = false,
+    val message: String? = null,
+)
+
+@Serializable
+data class NahwParseRequestDto(val text: String, val is_quranic: Boolean = false)
+
+@Serializable
+data class NahwParseResponseDto(val source: String, val tokens: List<NahwTokenDto>)
+
+@Serializable
+data class WordMorphologyDto(
+    val text_uthmani: String,
+    val text_imlaei: String?,
+    val root: String?,
+    val lemma: String?,
+    val pos_tag: String?,
+    val pattern: String?,
+    val tense: String?,
+    val voice: String?,
+    val gender: String?,
+    val number: String?,
+    val person: String?,
+    val features_json: Map<String, JsonElement>?,
+)
+
+@Serializable
+data class TreebankRelationDto(
+    val role: String?,
+    val dep_type: String?,
+    val head_index: Int?,
+    val head_surah_number: Int?,
+    val head_ayah_number: Int?,
+    val irab: String?,
+    val sentence_index: Int?,
+)
+
+@Serializable
+data class ExplainGroundingDto(
+    val word_id: Int,
+    val position: Int,
+    val surah_number: Int,
+    val ayah_number: Int,
+    val verse_text: String,
+    val translation: String?,
+    val morphology: WordMorphologyDto,
+    val relation: TreebankRelationDto?,
+    val missing_data: List<String> = emptyList(),
+)
+
+@Serializable
+data class NahwExplainResponseDto(
+    val word_id: Int,
+    val language: String,
+    val source: String,
+    val explanation: String,
+    val cached: Boolean = false,
+    val grounding: ExplainGroundingDto,
+)
+
+// ---------- Tutor ----------
+
+@Serializable
+data class TutorReferenceDto(
+    val surah_number: Int?,
+    val ayah_number: Int?,
+    val word_id: Int?,
+)
+
+@Serializable
+data class TutorChatRequestDto(
+    val message: String,
+    val session_id: Int?,
+    val reference: TutorReferenceDto?,
+)
+
+@Serializable
+data class TutorCitationOutDto(val surah: Int, val ayah: Int)
+
+@Serializable
+data class TutorUsageDto(val prompt_tokens: Int?, val completion_tokens: Int?)
+
+@Serializable
+data class TutorChatResponseDto(
+    val session_id: Int,
+    val reply: String,
+    val citations: List<TutorCitationOutDto>,
+    val model: String,
+    val usage: TutorUsageDto,
+    val truncated_context: Boolean = false,
+    val unresolved_references: List<String> = emptyList(),
+    val incomplete: Boolean = false,
+)
+
+@Serializable
+data class TutorSessionSummaryDto(
+    val id: Int,
+    val title: String,
+    val message_count: Int,
+    val created_at: String,
+    val updated_at: String,
+)
+
+@Serializable
+data class TutorSessionListDto(val sessions: List<TutorSessionSummaryDto>)
+
+// ---------- Health ----------
+
+@Serializable
+data class ComponentHealthDto(val status: String, val latency_ms: Double?, val error: String?)
+
+@Serializable
+data class HealthResponseDto(
+    val status: String,
+    val version: String,
+    val uptime_seconds: Double,
+    val timestamp: String,
+    val environment: String,
+    val python_version: String,
+    val platform: String,
+    val database: ComponentHealthDto,
+)
+
+@Serializable
+data class SimpleProbeResponseDto(val status: String)

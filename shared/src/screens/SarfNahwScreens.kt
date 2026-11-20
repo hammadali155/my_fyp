@@ -24,6 +24,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,8 +42,8 @@ import com.meher.jawhar.data.LocalApi
 import com.meher.jawhar.data.api.AnalyzeResponseDto
 import com.meher.jawhar.data.api.WordFamilyResponseDto
 import com.meher.jawhar.data.api.ConjugateResponseDto
-import com.meher.jawhar.data.api.wordFamily
-import com.meher.jawhar.data.api.conjugate
+import com.meher.jawhar.data.api.NahwParseResponseDto
+import com.meher.jawhar.data.api.nahwParse
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
 import com.meher.jawhar.nav.LocalNav
@@ -266,36 +268,81 @@ fun ConjugationScreen() {
 @Composable
 fun NahwInputScreen() {
     val nav = LocalNav.current
+    val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
+    val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ") }
-    Page(title = "Nahw Parser", right = JI.More, cta = { JButton("Parse sentence", { nav.go(Dest.NahwResult) }) }) {
-        JCard(Modifier.fillMaxWidth(), radius = 34.dp, padding = 20.dp) {
-            JText("ARABIC SENTENCE", t.labelS, c.onSurfaceSubtle)
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                BasicTextField(text, { text = it }, Modifier.fillMaxWidth().padding(vertical = 8.dp), textStyle = t.arabicQuranL.copy(color = c.onSurface), cursorBrush = SolidColor(c.primary))
-            }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                JText("${text.length} / 200", t.bodyS, c.onSurfaceSubtle, Modifier.weight(1f))
-                Box(Modifier.size(28.dp).clip(CircleShape).background(c.bgSurfaceHigh).tappable { text = "" }, contentAlignment = Alignment.Center) { JIcon(JI.Close, size = 14.dp, tint = c.onSurfaceVariant, strokeWidth = 2.dp) }
-            }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+
+    Page(title = "Nahw Parser", right = JI.More, cta = {
+        if (loading) {
+            JButton("Parsing…", {}, enabled = false)
+        } else {
+            JButton("Parse sentence", {
+                scope.launch {
+                    loading = true
+                    error = false
+                    try {
+                        val result = api.nahwParse(text)
+                        nav.go(Dest.NahwResult, result)
+                    } catch (e: Exception) {
+                        error = true
+                        errorMessage = e.message ?: "Parse failed"
+                    } finally {
+                        loading = false
+                    }
+                }
+            })
         }
-        SectionTitle("Try an example")
-        Mock.examples.forEach { ex ->
-            Row(Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).tappable { text = ex.arabic }.padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                JText(ex.ref, t.labelM, c.onSurfaceSubtle, Modifier.weight(1f))
-                JArabic(ex.arabic, t.arabicQuranM, c.onSurface)
+    }) {
+        if (error) {
+            StateScreen(JI.Alert, c.errorContainer, c.error, "Could not parse", errorMessage, "Try again", onPrimary = { error = false }, back = true)
+        } else {
+            JCard(Modifier.fillMaxWidth(), radius = 34.dp, padding = 20.dp) {
+                JText("ARABIC SENTENCE", t.labelS, c.onSurfaceSubtle)
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    BasicTextField(text, { text = it }, Modifier.fillMaxWidth().padding(vertical = 8.dp), textStyle = t.arabicQuranL.copy(color = c.onSurface), cursorBrush = SolidColor(c.primary))
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    JText("${text.length} / 200", t.bodyS, c.onSurfaceSubtle, Modifier.weight(1f))
+                    Box(Modifier.size(28.dp).clip(CircleShape).background(c.bgSurfaceHigh).tappable { text = "" }, contentAlignment = Alignment.Center) { JIcon(JI.Close, size = 14.dp, tint = c.onSurfaceVariant, strokeWidth = 2.dp) }
+                }
             }
-        }
-        SectionTitle("Recent")
-        Row(Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            JText("Yesterday", t.labelM, c.onSurfaceSubtle, Modifier.weight(1f))
-            JArabic("إِنَّ ٱللَّهَ غَفُورٌ رَّحِيمٌ", t.arabicTitle, c.onSurface)
+            if (loading) {
+                JSkeleton(Modifier.fillMaxWidth().height(120.dp), radius = 34.dp)
+            }
+            SectionTitle("Try an example")
+            Mock.examples.forEach { ex ->
+                Row(Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).tappable { text = ex.arabic }.padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    JText(ex.ref, t.labelM, c.onSurfaceSubtle, Modifier.weight(1f))
+                    JArabic(ex.arabic, t.arabicQuranM, c.onSurface)
+                }
+            }
+            SectionTitle("Recent")
+            Row(Modifier.fillMaxWidth().clip(SquircleShape(26.dp)).background(c.bgSurfaceVariant).padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                JText("Yesterday", t.labelM, c.onSurfaceSubtle, Modifier.weight(1f))
+                JArabic("إِنَّ ٱللَّهَ غَفُورٌ رَّحِيمٌ", t.arabicTitle, c.onSurface)
+            }
         }
     }
 }
 
-private class WordInfo(val word: String, val role: GrammarRole, val roleName: String, val note: String, val case: String, val reason: String, val pair: String)
+private fun roleKeyToGrammarRole(roleKey: String?, c: JawharColors): GrammarRole {
+    val key = (roleKey ?: "").lowercase()
+    return when {
+        key.contains("mubtada") -> GrammarRole.Mubtada
+        key.contains("khabar") -> GrammarRole.Khabar
+        key.contains("na't") || key.contains("nat") -> GrammarRole.Nat
+        key.contains("mudaf") -> GrammarRole.Mudaf
+        key.contains("fa'il") || key.contains("fail") -> GrammarRole.Faail
+        key.contains("maf") -> GrammarRole.Maful
+        key.contains("harf") -> GrammarRole.Harf
+        else -> GrammarRole.Harf
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -303,47 +350,64 @@ fun NahwResultScreen() {
     val nav = LocalNav.current
     val c = Jawhar.colors
     val t = Jawhar.type
-    val words = listOf(
-        WordInfo("ٱلْحَمْدُ", GrammarRole.Mubtada, "Mubtada", "Topic of the sentence", "Marfu' (nominative)", "Starts a nominal sentence", "لِلَّهِ · Khabar"),
-        WordInfo("لِلَّهِ", GrammarRole.Khabar, "Khabar", "Completes the topic", "Majrur (genitive)", "Follows the preposition lam", "ٱلْحَمْدُ · Mubtada"),
-        WordInfo("رَبِّ", GrammarRole.Nat, "Na't", "Describes ٱللَّه", "Majrur (genitive)", "Follows the word it describes", "لِلَّهِ"),
-        WordInfo("ٱلْعَٰلَمِينَ", GrammarRole.Mudaf, "Mudaf ilayh", "Possessor of رَبِّ", "Majrur (genitive)", "Second part of an idafa", "رَبِّ"),
-    )
-    var selected by remember { mutableStateOf<Int?>(0) }
+    val parseResult = nav.currentArg as? NahwParseResponseDto
+    val tokens = parseResult?.tokens ?: emptyList()
+    val hasError = parseResult == null || tokens.isEmpty()
+    var selected by remember { mutableStateOf<Int?>(null) }
+
     Page(title = "Nahw Parser", right = JI.More, overlay = {
         val s = selected
-        if (s != null) {
-            val w = words[s]
+        if (s != null && s < tokens.size) {
+            val tok = tokens[s]
             JBottomSheet(onDismiss = { selected = null }, visible = true) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        JTag(w.roleName, background = w.role.color(c).copy(alpha = 0.14f), color = w.role.color(c), height = 28.dp)
-                        JText(w.note, t.bodyS, c.onSurfaceVariant)
-                    }
-                    JArabic(w.word, t.arabicWordL, c.onSurface)
-                }
-                JCard(Modifier.fillMaxWidth(), padding = 8.dp) {
-                    listOf("Case" to w.case, "Reason" to w.reason, "Pairs with" to w.pair).forEach { (a, b) ->
-                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            JText(a, t.labelM, c.onSurfaceSubtle, Modifier.weight(1f))
-                            JText(b, t.titleS, c.onSurface)
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    JTag(tok.role_key ?: "role", background = roleKeyToGrammarRole(tok.role_key, c).color(c).copy(alpha = 0.14f), color = roleKeyToGrammarRole(tok.role_key, c).color(c), height = 28.dp)
+                    JArabic(tok.text_uthmani, t.arabicWordL, c.onSurface)
+                    JCard(Modifier.fillMaxWidth(), padding = 16.dp) {
+                        val rows = listOf(
+                            Pair("Position", tok.position.toString()),
+                            Pair("Role (AR)", tok.role_ar ?: "—"),
+                            Pair("Role (EN)", tok.role_en),
+                            Pair("Dep. type", tok.dep_type ?: "—"),
+                            Pair("I'rab", tok.irab ?: "—"),
+                            Pair("Head index", tok.head_index?.toString() ?: "—"),
+                            Pair("Sentence", tok.sentence_index?.toString() ?: "—"),
+                        )
+                        rows.forEach { pair ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                JText(pair.first, t.labelM, c.onSurfaceSubtle)
+                                JText(pair.second, t.titleS, c.onSurface)
+                            }
                         }
                     }
+                    TwoButtons("Ask the tutor", { selected = null; nav.go(Dest.TutorChat) }, "Done", { selected = null })
                 }
-                TwoButtons("Ask the tutor", { selected = null; nav.go(Dest.TutorChat) }, "Add to cards", { selected = null })
             }
         }
     }) {
-        JTag("Al-Fatiha · 1:2", background = c.bgSurfaceVariant, color = c.onSurfaceVariant)
-        JCard(Modifier.fillMaxWidth(), radius = 34.dp, padding = 16.dp) {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    words.forEachIndexed { i, w -> JWordChip(w.word, w.role, selected = selected == i, onClick = { selected = i }) }
+        if (hasError) {
+            StateScreen(JI.WifiOff, c.errorContainer, c.error, parseResult?.let { "No annotations" } ?: "No data", "The sentence could not be parsed. Try an example verse.", "Try again", onPrimary = { nav.back() }, back = true)
+        } else {
+            JTag("${parseResult?.source ?: "corpus"} · ${tokens.size} words", background = c.bgSurfaceVariant, color = c.onSurfaceVariant)
+            JCard(Modifier.fillMaxWidth(), radius = 34.dp, padding = 16.dp) {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        tokens.forEachIndexed { i, tok ->
+                            val role = roleKeyToGrammarRole(tok.role_key, c)
+                            JWordChip(tok.text_uthmani, role, selected = selected == i, onClick = { selected = i })
+                        }
+                    }
                 }
             }
-        }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            words.forEach { JTag(it.roleName, background = it.role.color(c).copy(alpha = 0.14f), color = it.role.color(c), height = 28.dp) }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                tokens.forEach { tok ->
+                    val role = roleKeyToGrammarRole(tok.role_key, c)
+                    JTag(tok.role_key?.capitalize() ?: "Role", background = role.color(c).copy(alpha = 0.14f), color = role.color(c), height = 28.dp)
+                }
+            }
+            if (tokens.isNotEmpty()) {
+                JInfoCard("Word detail", "Tap any word above to see its full grammatical breakdown.", tone = JTone.Info, icon = JI.Info)
+            }
         }
     }
 }
