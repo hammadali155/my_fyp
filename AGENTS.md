@@ -75,6 +75,27 @@ Not done:
 - Desktop runtime: default window size configured to a mobile viewport (`412.dp x 860.dp`, centered) in `desktopApp/src/main.kt`.
 - Screens still on mock data: `HomeLearnScreens` (lesson path not yet backend-backed), `NahwResultScreen` (backend `GET /nahw/verse/...` and the corpus path of `POST /nahw/parse` exist but the screen is not wired to them yet), `TutorScreens` (backend `/tutor/chat`, `/tutor/sessions` and delete now exist; the screen is not wired to them yet).
 - Placement and lesson content are mock-backed: `Mock.placementQuestions` (12 questions) and `Mock.lessonFormI` (5 content steps, 5 questions). No assessment or lesson endpoint exists yet. **The Arabic in both needs sign-off from someone who knows the language before shipping** — the questions set a learner's starting level.
+- Frontend stability fixes landed (2026-11-20):
+  - **Theme persistence**: `AppState.themeMode` (`ThemeMode.System`/`Light`/`Dark`, default System) added to `shared/src/data/AppState.kt`; `App()` computes `dark` from it + `isSystemInDarkTheme()` and passes it to `JawharTheme(dark=...)`; `AppearanceScreen` theme selector now writes to `AppState.themeMode`, so the choice survives navigation and no longer resets the app on change.
+  - **Error states**: `HomeScreen`, `ProfileScreen` and `BadgesScreen` now show an inline error state ("Could not load … Check your connection") with a "Try again" button when the backend is unreachable, instead of silently swallowing API exceptions. Sarf/Conjugation/WordFamily already had loading/failure handling.
+- **Full frontend-to-backend API integration** landed (2026-11-20): every backend endpoint now has a corresponding Ktor client function in `shared/src/data/api/ApiClient.kt` and DTOs in `shared/src/data/api/ApiModels.kt`.
+  - **Auth**: refresh, logout, update profile
+  - **Quran**: getSurah, getVerseById
+  - **Morphology**: segment, listVerbForms, rootConcordance (analyze/conjugate/wordFamily/patterns already existed)
+  - **SRS**: createCard, deleteCard (due/review/stats already existed)
+  - **Bookmarks**: create, list, delete
+  - **Decks**: create, addWord, addWordsBulk, delete
+  - **Nahw**: nahwVerse, nahwParse, nahwExplain
+  - **Tutor**: tutorChat, tutorSessions, tutorDeleteSession
+  - **Health**: health, healthReady, healthLive
+- **Screens wired to real backend** (no longer mock-backed):
+  - `NahwInputScreen` — calls `POST /nahw/parse`, passes `NahwParseResponseDto` via nav arg to `NahwResultScreen`
+  - `NahwResultScreen` — renders real tokens from the API (position, role, i'rab, head index, sentence index), word-tap bottom sheet shows full grammatical breakdown, error state when parsing fails
+  - `DailyChallengeScreen` — calls `GET /nahw/verse/1/2`, passes real verse tokens to `NahwResultScreen`
+  - `TutorChatScreen` — calls `POST /tutor/chat` to send/receive messages, persists session across messages, supports `reference` nav arg (word/verse lookup), streaming-ready UI, error state
+  - `TutorHistoryScreen` — calls `GET /tutor/sessions`, lists sessions with delete (`DELETE /tutor/sessions/{id}`), error/empty states
+  - `HomeScreen`, `ProfileScreen`, `BadgesScreen` — error states on API failure
+- Animations already present (not changed): `ScreenHost` uses `AnimatedContent` with slide/fade for stack push/pop and crossfade for tab switches; `JFloatingNav` animates tint/scale. True predictive back (gesture-progress tracking) is not available in common KMP Compose — `SystemBackHandler` on Android is a plain `BackHandler(enabled, onBack)` callback, so it cannot be implemented cross-platform without platform-specific `OnBackPressedDispatcher` work.
 
 ## Repository Structure
 
@@ -231,3 +252,31 @@ The specs and code disagree in places; decide, then align both:
 - **Route names:** Resolved 2026-10-04: TRD updated to match the code — `/srs/due`, `/morphology/*`, `/quran/verses/{verse_id}`.
 - **Scope:** the 32-module PDF includes a leaderboard and TTS audio, which the PRD marks out of scope; it lists 15 verb forms while the code has 10.
 - **Ownership:** confirm with the project partner which backend parts are finished and who owns the next modules.
+
+## Deployment (Render + Supabase)
+
+**Backend:** Render free web service (native Python, not Docker — Render free tier doesn't support Docker) + Supabase free PostgreSQL.
+- `render.yaml` at repo root — declares the `jawhar-backend` service, `rootDir: backend`, health check at `/health/live`, auto-deploy on push.
+- **Render dashboard settings:**
+  - **Build command:** `pip install uv && uv sync --frozen --no-cache && uv run alembic upgrade head`
+  - **Start command:** `uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Env vars to set in Render dashboard** (`.env` is gitignored; `.env.example` is the template):
+  - `DATABASE_URL` — Supabase PostgreSQL connection string (`postgresql+asyncpg://...`)
+  - `JWT_SECRET` — strong random string (Render can generate)
+  - `GEMINI_API_KEY` — only if using the AI tutor; leave empty to disable
+  - `CORS_ORIGINS` — include your frontend/domain(s)
+  - `DEBUG` — `false` in production
+- Supabase: create a free project, copy the PostgreSQL connection string (with `?sslmode=require` if needed) into `DATABASE_URL`.
+- `backend/Dockerfile` is kept as a reference/artifact for other platforms (Railway, Koyeb, etc. that support Docker on free tier).
+
+**Keep-alive (Render free tier spins down after 15 min inactivity):**
+- `.github/workflows/keep-alive.yml` — GitHub Actions cron that pings `/health/live` every 14 minutes.
+- Set `RENDER_BACKEND_URL` secret in GitHub repo settings (your Render service URL, e.g. `https://jawhar-backend.onrender.com`).
+
+**Frontend:**
+- Android: build APK locally (`./kotlin build`), distribute manually — no hosting needed.
+- Web (optional): `webApp` is a Compose Multiplatform wasm-js target; deploy to GitHub Pages / Netlify (free).
+- Desktop: local JVM app, users run it themselves — not hosted. Update `shared/src@jvm/data/api/ApiClient.jvm.kt` `defaultApiBaseUrl()` to your Render URL when live.
+
+**Before first deploy:** smoke-test locally — `uv sync && uv run alembic upgrade head && uv run fastapi dev app/main.py`, then `curl http://localhost:8000/health/live`.
+

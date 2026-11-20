@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meher.jawhar.data.AppState
+import com.meher.jawhar.data.ThemeMode
 import com.meher.jawhar.data.LocalApi
 import com.meher.jawhar.data.api.BadgeDto
 import com.meher.jawhar.data.api.UserDto
@@ -128,19 +129,27 @@ fun BadgesScreen() {
     var filter by remember { mutableStateOf(0) }
     var badges by remember { mutableStateOf<List<BadgeDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var apiFailed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        try { badges = api.badges() } catch (e: Exception) { } finally { loading = false }
+        try {
+            badges = api.badges()
+            apiFailed = false
+        } catch (e: Exception) {
+            apiFailed = true
+        } finally {
+            loading = false
+        }
     }
 
     val unlocked = badges.count { it.unlocked }
     Page {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            JText("Badges", t.headlineL, c.onSurface, Modifier.weight(1f))
-            JText("$unlocked of ${badges.size}", t.labelL, c.onSurfaceVariant)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("All", "Unlocked", "Locked").forEachIndexed { i, l -> JChip(l, filter == i, { filter = i }) } }
-        if (loading) {
+        if (apiFailed) {
+            Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load badges", "Jawhar couldn't reach the server. Check your connection and try again.")
+                JButton("Try again", { loading = true; apiFailed = false }, Modifier.align(Alignment.CenterHorizontally).size(150.dp, 44.dp), JButtonStyle.Tonal, height = 44.dp)
+            }
+        } else if (loading) {
             repeat(3) {
                 Row(Modifier.fillMaxWidth()) {
                     repeat(3) { JSkeleton(Modifier.weight(1f).height(96.dp).padding(4.dp), radius = 20.dp) }
@@ -164,9 +173,15 @@ fun ProfileScreen() {
     val c = Jawhar.colors
     val t = Jawhar.type
     var user by remember { mutableStateOf<UserDto?>(null) }
+    var apiFailed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        try { user = api.me() } catch (e: Exception) { }
+        try {
+            user = api.me()
+            apiFailed = false
+        } catch (e: Exception) {
+            apiFailed = true
+        }
     }
 
     val name = user?.name ?: "Loading…"
@@ -176,7 +191,13 @@ fun ProfileScreen() {
     val level = user?.level ?: "beginner"
 
     Page(back = false, tab = JTab.Profile, right = JI.Sliders, onRight = { nav.go(Dest.Settings) }) {
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (apiFailed) {
+            Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load your profile", "Jawhar couldn't reach the server. Check your connection and try again.")
+                JButton("Try again", { apiFailed = false }, Modifier.align(Alignment.CenterHorizontally).size(150.dp, 44.dp), JButtonStyle.Tonal, height = 44.dp)
+            }
+        } else {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.size(190.dp).starOrnaments(c.accent, StarSpec(95.dp, 95.dp, 190.dp, 0.3f)), contentAlignment = Alignment.Center) { JAvatar(initials, size = 88.dp) }
             JText(name, t.headlineM, c.onSurface)
             JText("${level.replaceFirstChar { it.uppercase() }} · Joined ${user?.created_at?.take(7) ?: ""}", t.bodyM, c.onSurfaceVariant)
@@ -190,6 +211,7 @@ fun ProfileScreen() {
         JListItem("Leaderboard", subtitle = "This week's rankings", icon = JI.Trophy, onClick = { nav.go(Dest.Leaderboard) })
         JListItem("Badges", subtitle = "Achievements unlocked", icon = JI.Star, onClick = { nav.go(Dest.Badges) })
         JListItem("Bookmarks", subtitle = "Saved ayat and words", icon = JI.Bookmark, onClick = { nav.go(Dest.Quran) })
+        }
     }
 }
 
@@ -245,14 +267,36 @@ fun EditProfileScreen() {
 fun AppearanceScreen() {
     val c = Jawhar.colors
     val t = Jawhar.type
-    var theme by remember { mutableStateOf(1) }
+    var themeIndex by remember {
+        mutableStateOf(
+            when (AppState.themeMode) {
+                ThemeMode.System -> 0
+                ThemeMode.Light -> 1
+                ThemeMode.Dark -> 2
+            }
+        )
+    }
+    LaunchedEffect(AppState.themeMode) {
+        themeIndex = when (AppState.themeMode) {
+            ThemeMode.System -> 0
+            ThemeMode.Light -> 1
+            ThemeMode.Dark -> 2
+        }
+    }
     var size by remember { mutableStateOf(0.6f) }
     var translit by remember { mutableStateOf(true) }
     var translation by remember { mutableStateOf(true) }
     Page {
         BigTitle("Appearance")
         JSectionLabel("Theme")
-        JSegmented(listOf("System", "Light", "Dark"), theme, { theme = it })
+        JSegmented(listOf("System", "Light", "Dark"), themeIndex, { index ->
+            themeIndex = index
+            AppState.themeMode = when (index) {
+                0 -> ThemeMode.System
+                1 -> ThemeMode.Light
+                else -> ThemeMode.Dark
+            }
+        })
         JSectionLabel("Arabic text size")
         JSlider(size, { size = it })
         JCard(Modifier.fillMaxWidth(), radius = 34.dp, padding = 20.dp) {
