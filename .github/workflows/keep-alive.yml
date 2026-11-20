@@ -1,0 +1,21 @@
+name: Keep Render backend alive
+
+on:
+  schedule:
+    # Render free tier spins down after 15 min of inactivity.
+    # Ping every 14 minutes to keep the backend warm.
+    - cron: "*/14 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${{ secrets.RENDER_BACKEND_URL }}/health/live" || echo "000")
+          echo "Health check returned: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Backend health check failed with status $STATUS"
+            exit 1
+          fi

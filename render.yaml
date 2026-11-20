@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: jawhar-backend
+    env: python
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: "pip install uv && uv sync --frozen --no-cache && uv run alembic upgrade head"
+    startCommand: "uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health/live
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: '["*"]'
+      - key: LOG_LEVEL
+        value: INFO
+      - key: TUTOR_DAILY_MESSAGE_LIMIT
+        value: "40"
+      - key: TUTOR_CONTEXT_MAX_CHARS
+        value: "6000"
+      - key: TUTOR_HISTORY_MAX_TOKENS
+        value: "2000"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: DEBUG
+        value: "false"
+    autoDeploy: true
