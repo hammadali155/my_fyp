@@ -54,6 +54,15 @@ from app.schemas.srs import (
     SRSReviewResponse,
     SRSStatsResponse,
 )
+from app.schemas.tutor import (
+    TutorChatRequest,
+    TutorChatResponse,
+    TutorCitationOut,
+    TutorReference,
+    TutorSessionList,
+    TutorSessionSummary,
+    TutorUsage,
+)
 
 __all__ = [
     "MessageResponse",
@@ -101,4 +110,11 @@ __all__ = [
     "TreebankRelation",
     "ExplainGrounding",
     "NahwExplainResponse",
+    "TutorReference",
+    "TutorChatRequest",
+    "TutorCitationOut",
+    "TutorUsage",
+    "TutorChatResponse",
+    "TutorSessionSummary",
+    "TutorSessionList",
 ]

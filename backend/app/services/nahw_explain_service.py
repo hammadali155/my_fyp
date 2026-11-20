@@ -14,7 +14,13 @@ from app.schemas.nahw import (
     TreebankRelation,
     WordMorphology,
 )
-from app.services.gemini_client import GeminiClientProtocol, GeminiError, GeminiNotConfiguredError
+from app.services.llm_client import (
+    ChatMessage,
+    GenerationSettings,
+    LLMClient,
+    LLMError,
+    LLMNotConfiguredError,
+)
 
 logger = get_logger("services.nahw_explain")
 
@@ -47,7 +53,7 @@ def _cache_put(key: tuple[int, str], value: str) -> None:
         _explanation_cache.popitem(last=False)
 
 
-def build_explanation_prompt(grounding: ExplainGrounding, language: str) -> str:
+def build_explanation_system_prompt(language: str) -> str:
     language_name = LANGUAGE_NAMES.get(language, "English")
     return (
         "You are an expert Classical Arabic (Nahw) tutor. "
@@ -63,14 +69,21 @@ def build_explanation_prompt(grounding: ExplainGrounding, language: str) -> str:
         "4. Do not reproduce, complete, or generate Quranic text. The verse text is quoted "
         "verbatim from the database below.\n"
         "5. Do not cite any surah:ayah other than the one in the data.\n"
-        "6. Keep the answer under 150 words.\n\n"
-        "Data (verbatim from the database):\n"
-        f"{grounding.model_dump_json(indent=2)}"
+        "6. Keep the answer under 150 words."
+    )
+
+
+def build_explanation_message(grounding: ExplainGrounding) -> ChatMessage:
+    return ChatMessage(
+        role="user",
+        content=(
+            "Data (verbatim from the database):\n" + grounding.model_dump_json(indent=2)
+        ),
     )
 
 
 class NahwExplainService:
-    def __init__(self, db: AsyncSession, client: GeminiClientProtocol) -> None:
+    def __init__(self, db: AsyncSession, client: LLMClient) -> None:
         self.db = db
         self.client = client
 
@@ -85,20 +98,26 @@ class NahwExplainService:
             logger.info("Served cached explanation word_id=%s language=%s", word_id, language)
             return self._response(word_id, language, cached_explanation, grounding, cached=True)
 
-        prompt = build_explanation_prompt(grounding, language)
+        prompt = build_explanation_system_prompt(language)
+        message = build_explanation_message(grounding)
         try:
-            explanation = await self.client.generate(prompt)
-        except GeminiNotConfiguredError as exc:
+            result = await self.client.generate(
+                system_prompt=prompt,
+                messages=[message],
+                settings=GenerationSettings(temperature=0.2, max_output_tokens=400),
+            )
+        except LLMNotConfiguredError as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Explanation service is not configured (GEMINI_API_KEY is missing)",
             ) from exc
-        except GeminiError as exc:
+        except LLMError as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Explanation service is unavailable; try again later",
             ) from exc
 
+        explanation = result.text
         if not explanation.strip():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

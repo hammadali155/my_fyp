@@ -1,0 +1,37 @@
+Tutor question-set validation — 2026-11-17T18:21:31Z
+Question set: /home/madi/my_fyp/docs/evaluation/tutor-questions.md
+Database: /home/madi/my_fyp/backend/jawhar.db
+Questions: 30 (A: 10, B: 10, C: 10)
+
+A1 OK  1:2 #1 ٱلْحَمْدُ — root=حمد gloss='All praises and thanks'
+A2 OK  2:2 #2 ٱلْكِتَٰبُ — root=كتب gloss='(is) the book'
+A3 OK  2:255 #6 ٱلْحَىُّ — root=حيي gloss='the Ever-Living,'
+A4 OK  2:255 #7 ٱلْقَيُّومُ — root=قوم gloss='the Sustainer of all that exists.'
+A5 OK  2:256 #2 إِكْرَاهَ — root=كره gloss='compulsion'
+A6 OK  55:60 #2 جزاءُ — root=جزي gloss='(the) reward'
+A7 OK  93:4 #2 خَيْرٌ — root=خير gloss='(is) better'
+A8 OK  2:3 #5 ٱلصَّلَوٰةَ — root=صلو gloss='the prayer,'
+A9 OK  114:1 #4 ٱلنَّاسِ — root=نوس gloss='(of) mankind,'
+A10 OK  1:5 #1 إِيَّاكَ — root=ـ gloss='You Alone'
+B1 OK  1:1 #2 ٱللَّهِ — role='مضاف إليه' i'rab='مجرور'
+B2 OK  1:2 #1 ٱلْحَمْدُ — role='root' i'rab='مرفوع'
+B3 OK  1:5 #1 إِيَّاكَ — role='مفعول به' i'rab=None
+B4 OK  2:2 #4 رَيْبَ — role='اسم لا' i'rab='منصوب'
+B5 OK  2:255 #3 إِلَٰهَ — role='اسم لا' i'rab='منصوب'
+B6 OK  2:256 #11 يَكْفُرْ — role='شرط' i'rab='مجزوم'
+B7 OK  55:60 #5 الْإحْسنُ — role='خبر' i'rab='مرفوع'
+B8 OK  93:4 #2 خَيْرٌ — role='خبر' i'rab='مرفوع'
+B9 OK  112:1 #4 أَحَدٌ — role='بدل' i'rab='مرفوع'
+B10 OK  114:1 #4 ٱلنَّاسِ — role='مضاف إليه' i'rab='مجرور'
+C1 OK  no verse reference (refusal=ruling)
+C2 OK  no verse reference (refusal=ruling)
+C3 OK  no verse reference (refusal=ruling)
+C4 OK  no verse reference (refusal=ruling)
+C5 OK  no verse reference (refusal=memory)
+C6 OK  no verse reference (refusal=memory)
+C7 OK  200:1 absent from the corpus (surahs in corpus: 114)
+C8 OK  no verse reference (refusal=memory)
+C9 OK  no verse reference (refusal=ruling)
+C10 OK  no verse reference (refusal=ruling)
+
+All 30 questions valid against the corpus.

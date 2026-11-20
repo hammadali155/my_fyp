@@ -211,16 +211,43 @@ Base URL: `/api/v1`
 > `nahw_annotations` relation and the surrounding verse text/translation from the
 > database. The prompt forbids inventing grammar or Quranic references, forbids
 > generating Quranic text, and requires an explicit "data unavailable" answer for
-> null fields. Gemini is called through `app/services/gemini_client.py`
-> (`GEMINI_API_KEY`); answers are cached in-process by `(word_id, language)`,
+> null fields. Gemini is called only through `app/services/llm_client.py`
+> (`GEMINI_API_KEY`; install the optional `llm` extra); answers are cached
+> in-process by `(word_id, language)`,
 > where `language` follows `users.ui_lang` (`ur` → Urdu, otherwise English).
 
 ### 4.5 AI Tutor
 | Method | Route | Description |
 |--------|-------|-------------|
-| POST | `/tutor/chat` | Body: `{"session_id":"...", "message":"..."}` → AI Tutor response |
+| POST | `/tutor/chat` | Body: `{"message":"...", "session_id"?, "reference"?}` → AI Tutor response |
+| POST | `/tutor/chat/stream` | Same body, reply streamed as server-sent events |
 | GET | `/tutor/sessions` | List user chat sessions |
 | DELETE | `/tutor/sessions/{id}` | Delete history |
+
+> All Tutor routes require auth. `POST /tutor/chat` checks the per-user daily
+> limit (`TUTOR_DAILY_MESSAGE_LIMIT`, UTC day, 429) before anything else, loads
+> only the caller's session (404 otherwise), builds the DB-only context
+> (`app/services/tutor_context.py`), trims history to
+> `TUTOR_HISTORY_MAX_TOKENS`, and stores both messages after a successful
+> generation. The system prompt is the single constant `TUTOR_SYSTEM_PROMPT`
+> in `app/services/tutor_prompts.py`. Quranic text is never taken from model
+> output; returned citations must appear in the retrieved context and exist in
+> the corpus, otherwise they are dropped.
+
+> **Streaming (`POST /tutor/chat/stream`).** Same service, context, quota and
+> storage as `/tutor/chat` — only the transport differs. Preflight failures
+> (401, 404, 422, 429) return their normal HTTP status before the stream
+> opens. The body is `text/event-stream` with three event types:
+> `token` (`{"text": "…"}` per chunk), `done` (the full `TutorChatResponse`,
+> `incomplete: false`) and `error` (`{"detail": "…", "incomplete": true}`),
+> written by `format_sse_event` in `app/api/v1/tutor.py`. Streaming uses
+> `LLMClient.stream` (`LLMStreamEvent` chunks; non-streaming backends fall
+> back to one full-text event; Gemini uses
+> `generate_content_stream`). The assistant row is stored whether the stream
+> finishes or fails: partial text is kept, `chat_messages.incomplete`
+> (migration `1df9dc99ec6d`) is set, and token counts stay null. A failed
+> stream still stores the learner's question, so it counts toward the daily
+> limit.
 
 ### 4.6 SRS
 | Method | Route | Description |
@@ -356,6 +383,10 @@ Rules:
 ```
 
 Context injection: user profile (level, weak areas, recent lessons) + conversation history.
+The Quran block is retrieved by `app/services/tutor_context.py` from the database only
+(verse text, translations, words, Nahw); it is capped by `TUTOR_CONTEXT_MAX_CHARS`
+(referenced verse first) and never guesses: an unresolvable reference is stated as not
+found in the corpus.
 
 ---
 
