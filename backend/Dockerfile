@@ -30,6 +30,6 @@ COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
 
-# Render injects env vars (DATABASE_URL, JWT_SECRET, etc.) at runtime;
+# Render injects env vars (DATABASE_URL, JWT_SECRET, etc.) at runtime.
 # .env is gitignored and only used for local development.
 CMD sh -c "uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
