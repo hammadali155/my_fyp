@@ -27,7 +27,7 @@ WORKDIR /app
 # Copy venv and app code from builder
 COPY --from=builder /app/.venv /app/.venv
 # uv binary is needed at runtime for `uv run`
-COPY --from=builder /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 COPY app ./app
 COPY alembic ./alembic
