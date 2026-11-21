@@ -14,7 +14,7 @@ WORKDIR /app
 # Install dependencies first (better layer caching)
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-cache
+    uv sync --frozen --no-cache --extra postgres
 
 FROM python:3.11-slim AS runner
 
