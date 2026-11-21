@@ -50,6 +50,18 @@ class Settings(BaseSettings):
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")
 
+    @property
+    def database_url_asyncpg(self) -> str:
+        """Return DATABASE_URL with the asyncpg driver for PostgreSQL URLs.
+
+        SQLAlchemy defaults to psycopg for bare 'postgresql://' URLs, but we
+        use asyncpg. Normalize 'postgresql://' -> 'postgresql+asyncpg://'
+        so the driver is correct regardless of what the operator sets.
+        """
+        if self.database_url.startswith("postgresql://"):
+            return self.database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self.database_url
+
 
 @lru_cache
 def get_settings() -> Settings:
