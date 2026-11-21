@@ -267,7 +267,6 @@ The specs and code disagree in places; decide, then align both:
   - `CORS_ORIGINS` — include your frontend/domain(s)
   - `DEBUG` — `false` in production
 - Supabase: create a free project, copy the PostgreSQL connection string (with `?sslmode=require` if needed) into `DATABASE_URL`.
-- `backend/Dockerfile` is kept as a reference/artifact for other platforms (Railway, Koyeb, etc. that support Docker on free tier).
 
 **Keep-alive (Render free tier spins down after 15 min inactivity):**
 - `.github/workflows/keep-alive.yml` — GitHub Actions cron that pings `/health/live` every 14 minutes.
