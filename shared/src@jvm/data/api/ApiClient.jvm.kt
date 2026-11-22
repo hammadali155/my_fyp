@@ -23,5 +23,3 @@ actual suspend fun probeLocalBackend(timeoutMs: Int): Boolean {
         false
     }
 }
-
-actual fun renderApiBaseUrl(): String = "https://jawhar-backend.onrender.com"

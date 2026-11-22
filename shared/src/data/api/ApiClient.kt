@@ -20,7 +20,8 @@ expect fun defaultApiBaseUrl(): String
 
 expect suspend fun probeLocalBackend(timeoutMs: Int): Boolean
 
-expect fun renderApiBaseUrl(): String
+/** Render production backend URL — single source of truth. Change here, not in platform files. */
+val RENDER_API_BASE_URL: String = "https://jawhar-backend.onrender.com"
 
 class ApiClient(val baseUrl: String = defaultApiBaseUrl()) {
     val http: HttpClient = createHttpClient()
@@ -36,7 +37,7 @@ class ApiClient(val baseUrl: String = defaultApiBaseUrl()) {
             currentBaseUrl = defaultApiBaseUrl()
             isUsingLocalBackend = true
         } else {
-            currentBaseUrl = renderApiBaseUrl()
+            currentBaseUrl = RENDER_API_BASE_URL
             isUsingLocalBackend = false
         }
     }
