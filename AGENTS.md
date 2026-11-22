@@ -269,8 +269,8 @@ The specs and code disagree in places; decide, then align both:
 - Supabase: create a free project, copy the PostgreSQL connection string (with `?sslmode=require` if needed) into `DATABASE_URL`.
 
 **Keep-alive (Render free tier spins down after 15 min inactivity):**
-- `.github/workflows/keep-alive.yml` — GitHub Actions cron that pings `/health/live` every 14 minutes.
-- Set `RENDER_BACKEND_URL` secret in GitHub repo settings (your Render service URL, e.g. `https://jawhar-backend.onrender.com`).
+- External cron job (e.g. cron-job.org or UptimeRobot) pings `/health/live` every 5 minutes.
+- Set `RENDER_BACKEND_URL` secret in GitHub repo settings if using GitHub Actions instead.
 
 **Frontend:**
 - Android: build APK locally (`./kotlin build`), distribute manually — no hosting needed.
