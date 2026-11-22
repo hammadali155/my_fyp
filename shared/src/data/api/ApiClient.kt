@@ -18,62 +18,82 @@ expect fun createHttpClient(): HttpClient
 
 expect fun defaultApiBaseUrl(): String
 
+expect suspend fun probeLocalBackend(timeoutMs: Int): Boolean
+
+expect fun renderApiBaseUrl(): String
+
 class ApiClient(val baseUrl: String = defaultApiBaseUrl()) {
     val http: HttpClient = createHttpClient()
 
+    var currentBaseUrl: String = baseUrl
+        private set
+
+    var isUsingLocalBackend: Boolean = true
+        private set
+
+    suspend fun resolveBaseUrl() {
+        if (probeLocalBackend(3000)) {
+            currentBaseUrl = defaultApiBaseUrl()
+            isUsingLocalBackend = true
+        } else {
+            currentBaseUrl = renderApiBaseUrl()
+            isUsingLocalBackend = false
+        }
+    }
+
     suspend fun getSurahs(): List<SurahDto> =
-        http.get("$baseUrl/api/v1/quran/surahs").body<SurahListDto>().items
+        http.get("$currentBaseUrl/api/v1/quran/surahs").body<SurahListDto>().items
 
     suspend fun getSurah(surahId: Int): SurahDto =
-        http.get("$baseUrl/api/v1/quran/surahs/$surahId").body()
+        http.get("$currentBaseUrl/api/v1/quran/surahs/$surahId").body()
 
     suspend fun getVerseByRef(surah: Int, ayah: Int): VerseDto =
-        http.get("$baseUrl/api/v1/quran/surahs/$surah/verses/$ayah").body()
+        http.get("$currentBaseUrl/api/v1/quran/surahs/$surah/verses/$ayah").body()
 
     suspend fun getVerse(verseId: Int): VerseDto =
-        http.get("$baseUrl/api/v1/quran/verses/$verseId").body()
+        http.get("$currentBaseUrl/api/v1/quran/verses/$verseId").body()
 
     suspend fun getVerses(surahId: Int, page: Int = 1, pageSize: Int = 50): VerseListDto =
-        http.get("$baseUrl/api/v1/quran/verses?surah_id=$surahId&page=$page&page_size=$pageSize").body()
+        http.get("$currentBaseUrl/api/v1/quran/verses?surah_id=$surahId&page=$page&page_size=$pageSize").body()
 
     suspend fun analyze(word: String): AnalyzeResponseDto =
-        http.post("$baseUrl/api/v1/morphology/analyze") {
+        http.post("$currentBaseUrl/api/v1/morphology/analyze") {
             contentType(ContentType.Application.Json)
             setBody(AnalyzeRequestDto(word))
         }.body()
 
     suspend fun analyzeFull(word: String): MorphologyAnalyzeResponseDto =
-        http.post("$baseUrl/api/v1/morphology/analyze") {
+        http.post("$currentBaseUrl/api/v1/morphology/analyze") {
             contentType(ContentType.Application.Json)
             setBody(AnalyzeRequestDto(word))
         }.body()
 
     suspend fun segment(word: String): SegmentationDetailDto =
-        http.get("$baseUrl/api/v1/morphology/segment?word=$word").body()
+        http.get("$currentBaseUrl/api/v1/morphology/segment?word=$word").body()
 
     suspend fun listVerbForms(): List<VerbFormDto> =
-        http.get("$baseUrl/api/v1/morphology/forms").body()
+        http.get("$currentBaseUrl/api/v1/morphology/forms").body()
 
     suspend fun conjugate(root: String, form: Int): ConjugateResponseDto =
-        http.post("$baseUrl/api/v1/morphology/conjugate") {
+        http.post("$currentBaseUrl/api/v1/morphology/conjugate") {
             contentType(ContentType.Application.Json)
             setBody(ConjugateRequestDto(root, form))
         }.body()
 
     suspend fun wordFamily(root: String): WordFamilyResponseDto =
-        http.get("$baseUrl/api/v1/morphology/word-family/$root").body()
+        http.get("$currentBaseUrl/api/v1/morphology/word-family/$root").body()
 
     suspend fun patterns(): PatternsResponseDto =
-        http.get("$baseUrl/api/v1/morphology/patterns").body()
+        http.get("$currentBaseUrl/api/v1/morphology/patterns").body()
 
     suspend fun rootConcordance(root: String): RootConcordanceResponseDto =
-        http.get("$baseUrl/api/v1/morphology/roots/$root").body()
+        http.get("$currentBaseUrl/api/v1/morphology/roots/$root").body()
 
     fun close() = http.close()
 }
 
 suspend fun ApiClient.badges(): List<BadgeDto> =
-    authorizedGet("$baseUrl/api/v1/progress/badges").body<BadgeListResponseDto>().items
+    authorizedGet("$currentBaseUrl/api/v1/progress/badges").body<BadgeListResponseDto>().items
 
 val apiJson = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -155,10 +175,10 @@ suspend fun ApiClient.authorizedDelete(url: String): io.ktor.client.statement.Ht
     }
 
 suspend fun ApiClient.me(): UserDto =
-    authorizedGet("$baseUrl/api/v1/auth/me").body()
+    authorizedGet("$currentBaseUrl/api/v1/auth/me").body()
 
 suspend fun ApiClient.updateProfile(req: UserUpdateRequestDto): UserDto =
-    authorizedPatch("$baseUrl/api/v1/auth/me", req).body()
+    authorizedPatch("$currentBaseUrl/api/v1/auth/me", req).body()
 
 // ---------- SRS ----------
 
@@ -171,43 +191,43 @@ suspend fun ApiClient.srsCreateCard(
     surahNumber: Int? = null,
     ayahNumber: Int? = null,
 ): SrsCardDto =
-    authorizedPost("$baseUrl/api/v1/srs/cards", SrsCardCreateDto(itemType, front, back, hint, wordId, surahNumber, ayahNumber)).body()
+    authorizedPost("$currentBaseUrl/api/v1/srs/cards", SrsCardCreateDto(itemType, front, back, hint, wordId, surahNumber, ayahNumber)).body()
 
 suspend fun ApiClient.srsDue(): List<SrsCardDto> =
-    authorizedGet("$baseUrl/api/v1/srs/due").body<SrsDueDto>().cards.map { card ->
+    authorizedGet("$currentBaseUrl/api/v1/srs/due").body<SrsDueDto>().cards.map { card ->
         card.copy(new_card = card.state == "new")
     }
 
 suspend fun ApiClient.srsReview(cardId: Int, rating: Int): SrsReviewResponseDto =
-    authorizedPost("$baseUrl/api/v1/srs/review", SrsReviewRequestDto(cardId, rating, null)).body()
+    authorizedPost("$currentBaseUrl/api/v1/srs/review", SrsReviewRequestDto(cardId, rating, null)).body()
 
 suspend fun ApiClient.srsStats(): SrsStatsDto =
-    authorizedGet("$baseUrl/api/v1/srs/stats").body()
+    authorizedGet("$currentBaseUrl/api/v1/srs/stats").body()
 
 suspend fun ApiClient.srsDeleteCard(cardId: Int) =
-    authorizedDelete("$baseUrl/api/v1/srs/cards/$cardId")
+    authorizedDelete("$currentBaseUrl/api/v1/srs/cards/$cardId")
 
 // ---------- Decks ----------
 
 suspend fun ApiClient.getDecks(): List<DeckDto> =
-    authorizedGet("$baseUrl/api/v1/decks").body<DeckListDto>().items
+    authorizedGet("$currentBaseUrl/api/v1/decks").body<DeckListDto>().items
 
 suspend fun ApiClient.createDeck(name: String): DeckDto =
-    authorizedPost("$baseUrl/api/v1/decks", DeckCreateDto(name)).body()
+    authorizedPost("$currentBaseUrl/api/v1/decks", DeckCreateDto(name)).body()
 
 suspend fun ApiClient.addWordToDeck(deckId: Int, wordId: Int): DeckWordAddResponseDto =
-    authorizedPost("$baseUrl/api/v1/decks/$deckId/words", AddWordRequestDto(wordId)).body()
+    authorizedPost("$currentBaseUrl/api/v1/decks/$deckId/words", AddWordRequestDto(wordId)).body()
 
 suspend fun ApiClient.addWordsToDeckBulk(deckId: Int, wordIds: List<Int>): DeckWordAddResponseDto =
-    authorizedPost("$baseUrl/api/v1/decks/$deckId/words/bulk", BulkAddWordsRequestDto(wordIds)).body()
+    authorizedPost("$currentBaseUrl/api/v1/decks/$deckId/words/bulk", BulkAddWordsRequestDto(wordIds)).body()
 
 suspend fun ApiClient.deleteDeck(deckId: Int) =
-    authorizedDelete("$baseUrl/api/v1/decks/$deckId")
+    authorizedDelete("$currentBaseUrl/api/v1/decks/$deckId")
 
 // ---------- Quran ----------
 
 suspend fun ApiClient.search(q: String, page: Int = 1, pageSize: Int = 20): QuranSearchResponseDto =
-    http.get("$baseUrl/api/v1/quran/search?q=$q&page=$page&page_size=$pageSize").body()
+    http.get("$currentBaseUrl/api/v1/quran/search?q=$q&page=$page&page_size=$pageSize").body()
 
 suspend fun ApiClient.roots(minCount: Int? = null, posTag: String? = null, surahNumber: Int? = null, limit: Int = 50): RootRankResponseDto {
     val params = buildList {
@@ -216,57 +236,57 @@ suspend fun ApiClient.roots(minCount: Int? = null, posTag: String? = null, surah
         if (surahNumber != null) add("surah_number=$surahNumber")
         add("limit=$limit")
     }.joinToString("&")
-    return http.get("$baseUrl/api/v1/quran/roots?$params").body()
+    return http.get("$currentBaseUrl/api/v1/quran/roots?$params").body()
 }
 
 // ---------- Bookmarks ----------
 
 suspend fun ApiClient.createBookmark(verseId: Int, note: String? = null, collection: String? = null): BookmarkResponseDto =
-    authorizedPost("$baseUrl/api/v1/bookmarks", BookmarkCreateDto(verseId, note, collection)).body()
+    authorizedPost("$currentBaseUrl/api/v1/bookmarks", BookmarkCreateDto(verseId, note, collection)).body()
 
 suspend fun ApiClient.listBookmarks(collection: String? = null): BookmarkListResponseDto {
     val params = if (collection != null) "?collection=$collection" else ""
-    return authorizedGet("$baseUrl/api/v1/bookmarks$params").body<BookmarkListResponseDto>()
+    return authorizedGet("$currentBaseUrl/api/v1/bookmarks$params").body<BookmarkListResponseDto>()
 }
 
 suspend fun ApiClient.deleteBookmark(bookmarkId: Int) =
-    authorizedDelete("$baseUrl/api/v1/bookmarks/$bookmarkId")
+    authorizedDelete("$currentBaseUrl/api/v1/bookmarks/$bookmarkId")
 
 // ---------- Nahw ----------
 
 suspend fun ApiClient.nahwVerse(surah: Int, ayah: Int): NahwVerseResponseDto =
-    http.get("$baseUrl/api/v1/nahw/verse/$surah/$ayah").body()
+    http.get("$currentBaseUrl/api/v1/nahw/verse/$surah/$ayah").body()
 
 suspend fun ApiClient.nahwParse(text: String, isQuranic: Boolean = false): NahwParseResponseDto =
-    http.post("$baseUrl/api/v1/nahw/parse") {
+    http.post("$currentBaseUrl/api/v1/nahw/parse") {
         contentType(ContentType.Application.Json)
         setBody(NahwParseRequestDto(text, isQuranic))
     }.body()
 
 suspend fun ApiClient.nahwExplain(wordId: Int): NahwExplainResponseDto =
-    authorizedGet("$baseUrl/api/v1/nahw/explain/$wordId").body()
+    authorizedGet("$currentBaseUrl/api/v1/nahw/explain/$wordId").body()
 
 // ---------- Tutor ----------
 
 suspend fun ApiClient.tutorChat(message: String, sessionId: Int?, reference: TutorReferenceDto?): TutorChatResponseDto =
-    authorizedPost("$baseUrl/api/v1/tutor/chat", TutorChatRequestDto(message, sessionId, reference)).body()
+    authorizedPost("$currentBaseUrl/api/v1/tutor/chat", TutorChatRequestDto(message, sessionId, reference)).body()
 
 suspend fun ApiClient.tutorSessions(): TutorSessionListDto =
-    authorizedGet("$baseUrl/api/v1/tutor/sessions").body()
+    authorizedGet("$currentBaseUrl/api/v1/tutor/sessions").body()
 
 suspend fun ApiClient.tutorDeleteSession(sessionId: Int) =
-    authorizedDelete("$baseUrl/api/v1/tutor/sessions/$sessionId")
+    authorizedDelete("$currentBaseUrl/api/v1/tutor/sessions/$sessionId")
 
 // ---------- Health ----------
 
 suspend fun ApiClient.health(): HealthResponseDto =
-    http.get("$baseUrl/api/v1/health").body()
+    http.get("$currentBaseUrl/api/v1/health").body()
 
 suspend fun ApiClient.healthReady(): SimpleProbeResponseDto =
-    http.get("$baseUrl/api/v1/health/ready").body()
+    http.get("$currentBaseUrl/api/v1/health/ready").body()
 
 suspend fun ApiClient.healthLive(): SimpleProbeResponseDto =
-    http.get("$baseUrl/api/v1/health/live").body()
+    http.get("$currentBaseUrl/api/v1/health/live").body()
 
 // ---------- SRS DTOs (request bodies not yet in ApiModels) ----------
 

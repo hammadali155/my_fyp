@@ -14,6 +14,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +55,11 @@ fun App() {
         val nav = remember { JNav(Dest.Splash) }
         val session = remember { ScreenSession() }
         val canHandleBack = nav.canGoBack || (nav.current in Dest.TabDestinations && nav.current != Dest.Home)
+
+        LaunchedEffect(Unit) {
+            AppState.resolveBackendUrl()
+        }
+
         SystemBackHandler(enabled = canHandleBack) {
             if (nav.canGoBack) {
                 nav.back()
@@ -61,6 +67,11 @@ fun App() {
                 nav.tab(JTab.Home)
             }
         }
+
+        if (AppState.isUsingLocalBackend) {
+            LocalBackendIndicator()
+        }
+
         CompositionLocalProvider(LocalNav provides nav, LocalSession provides session, LocalApi provides AppState.api) {
             BoxWithConstraints(Modifier.fillMaxSize().background(Jawhar.colors.bgBase)) {
                 if (maxWidth > 760.dp && maxHeight > 560.dp) {
@@ -132,6 +143,34 @@ private fun DesktopShell(nav: JNav, windowHeight: Dp) {
                     }
                     JText("9:41", Jawhar.type.labelL, c.onSurface, Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 12.dp))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LocalBackendIndicator() {
+    val c = Jawhar.colors
+    val t = Jawhar.type
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(12.dp),
+        contentAlignment = Alignment.BottomStart,
+    ) {
+        Box(
+            Modifier
+                .clip(SquircleShape(16.dp))
+                .background(c.infoContainer)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        ) {
+            Row(
+                Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                JIcon(JI.Info, size = 10.dp, tint = c.info)
+                JText("Local backend", t.labelS, c.info)
             }
         }
     }

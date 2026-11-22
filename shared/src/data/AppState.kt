@@ -15,6 +15,7 @@ object AppState {
     val api = ApiClient()
     var galleryEnabled: Boolean = false
     var themeMode by mutableStateOf(ThemeMode.System)
+    var isUsingLocalBackend by mutableStateOf(true)
 
     fun isLoggedIn(): Boolean = Session.accessToken != null
 
@@ -22,6 +23,11 @@ object AppState {
         Session.accessToken = null
         Session.refreshToken = null
         Session.userName = null
+    }
+
+    suspend fun resolveBackendUrl() {
+        api.resolveBaseUrl()
+        isUsingLocalBackend = api.isUsingLocalBackend
     }
 }
 
