@@ -77,14 +77,14 @@ Free-tier deployment of the Jawhar backend (FastAPI) on **Render** with a **Supa
 
 Once the build succeeds, open:
 ```
-https://jawhar-backend.onrender.com/health/live
+https://fyp-obss.onrender.com/health/live
 ```
 You should see `{"status":"alive"}`.
 
 Also check:
 ```
-https://jawhar-backend.onrender.com/health/ready   (database ping)
-https://jawhar-backend.onrender.com/docs            (interactive API docs)
+https://fyp-obss.onrender.com/health/ready   (database ping)
+https://fyp-obss.onrender.com/docs            (interactive API docs)
 ```
 
 ## Step 4: Keep the backend awake (Render free tier)
@@ -94,7 +94,7 @@ Render free web services spin down after 15 minutes of inactivity. The repo incl
 1. Go to your GitHub repo **Settings → Secrets and variables → Actions**.
 2. Add a new repository secret:
    - Name: `RENDER_BACKEND_URL`
-   - Value: `https://jawhar-backend.onrender.com` (your actual Render URL)
+   - Value: `https://fyp-obss.onrender.com` (your actual Render URL)
 3. The workflow `.github/workflows/keep-alive.yml` will run on schedule `*/14 * * * *` and can also be triggered manually via the Actions tab.
 
 ## Step 5: Connect the frontend
@@ -104,7 +104,7 @@ The desktop JVM build points to `http://localhost:8000`. Update it to your Rende
 **File:** `shared/src@jvm/data/api/ApiClient.jvm.kt`
 
 ```kotlin
-actual fun defaultApiBaseUrl(): String = "https://jawhar-backend.onrender.com"
+actual fun defaultApiBaseUrl(): String = "https://fyp-obss.onrender.com"
 ```
 
 Rebuild the desktop app:
