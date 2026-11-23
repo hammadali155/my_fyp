@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,28 +57,38 @@ fun App() {
         val session = remember { ScreenSession() }
         val canHandleBack = nav.canGoBack || (nav.current in Dest.TabDestinations && nav.current != Dest.Home)
 
+        // Resolve backend URL before composing any screen content to avoid
+        // race condition where API calls hit localhost before fallback.
+        val resolvedState = remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
             AppState.resolveBackendUrl()
+            resolvedState.value = true
         }
 
-        SystemBackHandler(enabled = canHandleBack) {
-            if (nav.canGoBack) {
-                nav.back()
-            } else if (nav.current != Dest.Home) {
-                nav.tab(JTab.Home)
+        if (!resolvedState.value) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                JText("Connecting to backend…", Jawhar.type.bodyM, Jawhar.colors.onSurfaceVariant)
             }
-        }
+        } else {
+            SystemBackHandler(enabled = canHandleBack) {
+                if (nav.canGoBack) {
+                    nav.back()
+                } else if (nav.current != Dest.Home) {
+                    nav.tab(JTab.Home)
+                }
+            }
 
-        if (AppState.isUsingLocalBackend) {
-            LocalBackendIndicator()
-        }
+            if (AppState.isUsingLocalBackend) {
+                LocalBackendIndicator()
+            }
 
-        CompositionLocalProvider(LocalNav provides nav, LocalSession provides session, LocalApi provides AppState.api) {
-            BoxWithConstraints(Modifier.fillMaxSize().background(Jawhar.colors.bgBase)) {
-                if (maxWidth > 760.dp && maxHeight > 560.dp) {
-                    DesktopShell(nav, maxHeight)
-                } else {
-                    PhoneHost(nav)
+            CompositionLocalProvider(LocalNav provides nav, LocalSession provides session, LocalApi provides AppState.api) {
+                BoxWithConstraints(Modifier.fillMaxSize().background(Jawhar.colors.bgBase)) {
+                    if (maxWidth > 760.dp && maxHeight > 560.dp) {
+                        DesktopShell(nav, maxHeight)
+                    } else {
+                        PhoneHost(nav)
+                    }
                 }
             }
         }
