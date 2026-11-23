@@ -126,17 +126,26 @@ fun BadgesScreen() {
     val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
+
+    if (!AppState.isAuthenticated()) {
+        AuthWelcomeScreen(LocalNav.current)
+        return
+    }
+
     var filter by remember { mutableStateOf(0) }
     var badges by remember { mutableStateOf<List<BadgeDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var apiFailed by remember { mutableStateOf(false) }
+    var apiErrorMsg by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         try {
             badges = api.badges()
             apiFailed = false
+            apiErrorMsg = null
         } catch (e: Exception) {
             apiFailed = true
+            apiErrorMsg = if (e.message?.contains("401") == true || e.message?.contains("Unauthorized") == true) "Please log in to view your badges." else null
         } finally {
             loading = false
         }
@@ -146,7 +155,7 @@ fun BadgesScreen() {
     Page {
         if (apiFailed) {
             Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load badges", "Jawhar couldn't reach the server. Check your connection and try again.")
+                JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load badges", apiErrorMsg ?: "Jawhar couldn't reach the server. Check your connection and try again.")
                 JButton("Try again", { loading = true; apiFailed = false }, Modifier.align(Alignment.CenterHorizontally).size(150.dp, 44.dp), JButtonStyle.Tonal, height = 44.dp)
             }
         } else if (loading) {
@@ -172,15 +181,24 @@ fun ProfileScreen() {
     val api = LocalApi.current
     val c = Jawhar.colors
     val t = Jawhar.type
+
+    if (!AppState.isAuthenticated()) {
+        AuthWelcomeScreen(nav)
+        return
+    }
+
     var user by remember { mutableStateOf<UserDto?>(null) }
     var apiFailed by remember { mutableStateOf(false) }
+    var apiErrorMsg by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         try {
             user = api.me()
             apiFailed = false
+            apiErrorMsg = null
         } catch (e: Exception) {
             apiFailed = true
+            apiErrorMsg = if (e.message?.contains("401") == true || e.message?.contains("Unauthorized") == true) "Please log in to view your profile." else null
         }
     }
 
@@ -193,7 +211,7 @@ fun ProfileScreen() {
     Page(back = false, tab = JTab.Profile, right = JI.Sliders, onRight = { nav.go(Dest.Settings) }) {
         if (apiFailed) {
             Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load your profile", "Jawhar couldn't reach the server. Check your connection and try again.")
+                JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load your profile", apiErrorMsg ?: "Jawhar couldn't reach the server. Check your connection and try again.")
                 JButton("Try again", { apiFailed = false }, Modifier.align(Alignment.CenterHorizontally).size(150.dp, 44.dp), JButtonStyle.Tonal, height = 44.dp)
             }
         } else {

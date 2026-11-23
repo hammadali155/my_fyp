@@ -16,13 +16,20 @@ object AppState {
     var galleryEnabled: Boolean = false
     var themeMode by mutableStateOf(ThemeMode.System)
     var isUsingLocalBackend by mutableStateOf(true)
+    var isGuestMode by mutableStateOf(false)
 
     fun isLoggedIn(): Boolean = Session.accessToken != null
+    fun isAuthenticated(): Boolean = Session.accessToken != null || isGuestMode
+
+    fun enterGuestMode() {
+        isGuestMode = true
+    }
 
     fun logout() {
         Session.accessToken = null
         Session.refreshToken = null
         Session.userName = null
+        isGuestMode = false
     }
 
     suspend fun resolveBackendUrl() {

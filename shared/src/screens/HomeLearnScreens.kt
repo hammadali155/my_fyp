@@ -32,13 +32,18 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.meher.jawhar.data.LocalApi
+import com.meher.jawhar.data.AppState
 import com.meher.jawhar.data.api.me
 import com.meher.jawhar.data.api.NahwParseResponseDto
 import com.meher.jawhar.data.api.nahwVerse
 import com.meher.jawhar.data.api.srsDue
 import com.meher.jawhar.design.*
 import com.meher.jawhar.nav.Dest
+import com.meher.jawhar.nav.JNav
 import com.meher.jawhar.nav.LocalNav
+
+fun Throwable.isAuthError(): Boolean =
+    message?.contains("401") == true || message?.contains("Unauthorized") == true
 
 @Composable
 fun HomeScreen() {
@@ -47,12 +52,19 @@ fun HomeScreen() {
     val c = Jawhar.colors
     val t = Jawhar.type
     val top = LocalTopInset.current
+
+    if (!AppState.isAuthenticated()) {
+        AuthWelcomeScreen(nav)
+        return
+    }
+
     var userName by remember { mutableStateOf("there") }
     var streak by remember { mutableStateOf(0) }
     var xp by remember { mutableStateOf(0) }
     var dueCount by remember { mutableStateOf(0) }
     var newCount by remember { mutableStateOf(0) }
     var apiFailed by remember { mutableStateOf(false) }
+    var apiErrorMsg by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         try {
@@ -64,8 +76,10 @@ fun HomeScreen() {
             dueCount = due.size
             newCount = due.count { it.new_card }
             apiFailed = false
+            apiErrorMsg = null
         } catch (e: Exception) {
             apiFailed = true
+            apiErrorMsg = if (e.isAuthError()) "Please log in to view your progress." else null
         }
     }
 
@@ -87,7 +101,7 @@ fun HomeScreen() {
     ) {
         if (apiFailed) {
             Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load your progress", "Jawhar couldn't reach the server. Check your connection and try again.")
+                JCenterState(JI.WifiOff, c.errorContainer, c.error, "Could not load your progress", apiErrorMsg ?: "Jawhar couldn't reach the server. Check your connection and try again.")
                 JButton("Try again", { apiFailed = false }, Modifier.align(Alignment.CenterHorizontally).size(150.dp, 44.dp), JButtonStyle.Tonal, height = 44.dp)
             }
         } else {
@@ -140,6 +154,33 @@ fun HomeScreen() {
             JText("Analyse 3 verbs from Surah Al-Fatiha", t.titleM, c.onSurface)
             JText("+50 XP", t.labelL, c.onAccentContainer)
         }
+        }
+    }
+}
+
+@Composable
+fun AuthWelcomeScreen(nav: JNav) {
+    val c = Jawhar.colors
+    val t = Jawhar.type
+    Page(
+        back = false,
+        scroll = false,
+    ) {
+        Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Box(Modifier.size(144.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(144.dp).starOrnaments(Jawhar.colors.accent, StarSpec(72.dp, 72.dp, 140.dp, 0.3f)))
+                Box(Modifier.size(104.dp).clip(CircleShape).background(c.primaryContainer), contentAlignment = Alignment.Center) {
+                    JIcon(JI.Spark, size = 52.dp, tint = c.onPrimaryContainer, strokeWidth = 1.6.dp)
+                }
+            }
+            BigTitle("Welcome to Jawhar", "Learn Classical Arabic through the Quran", center = true)
+            Spacer(Modifier.height(24.dp))
+            Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                JButton("Log in", { nav.go(Dest.LogIn) }, Modifier.fillMaxWidth(), height = 48.dp)
+                JButton("Sign up", { nav.go(Dest.SignUp) }, Modifier.fillMaxWidth(), JButtonStyle.Tonal, height = 48.dp)
+                JButton("Continue as guest", { AppState.enterGuestMode() }, Modifier.fillMaxWidth(), JButtonStyle.Neutral, height = 48.dp)
+            }
+            JText("Guest mode lets you explore the app. Log in to save your progress.", t.bodyS, c.onSurfaceSubtle, Modifier.fillMaxWidth(), TextAlign.Center)
         }
     }
 }
