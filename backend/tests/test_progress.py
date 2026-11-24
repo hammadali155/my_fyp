@@ -7,7 +7,11 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from app.models.user import User
-from app.services.progress_service import compute_streak_update, xp_for_rating
+from app.services.progress_service import (
+    ProgressService,
+    compute_streak_update,
+    xp_for_rating,
+)
 
 
 def test_streak_same_day_unchanged():
@@ -29,6 +33,23 @@ def test_streak_missed_day_resets():
 def test_xp_table():
     assert xp_for_rating(1) == 2
     assert xp_for_rating(4) == 15
+
+
+@pytest.mark.asyncio
+async def test_apply_activity_counts_one_day_once(db_session):
+    user = User(email="activity@example.com", name="Activity", password_hash="x")
+    db_session.add(user)
+    await db_session.commit()
+
+    service = ProgressService(db_session)
+    today = date(2026, 11, 22)
+    await service.apply_activity(user.id, today)
+    assert user.streak_days == 1
+    await service.apply_activity(user.id, today)
+    assert user.streak_days == 1
+    await service.apply_activity(user.id, today + timedelta(days=1))
+    assert user.streak_days == 2
+    assert user.last_activity_date == today + timedelta(days=1)
 
 
 @pytest.mark.asyncio
@@ -57,6 +78,7 @@ async def test_review_updates_user_progress_and_first_badge(
     assert user.xp == 15
     assert user.streak_days == 1
     assert user.last_review_date is not None
+    assert user.last_activity_date == user.last_review_date
 
     r = await client.get("/api/v1/progress/badges", headers=auth_headers)
     assert r.status_code == 200
