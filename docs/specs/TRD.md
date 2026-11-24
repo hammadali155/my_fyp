@@ -259,18 +259,58 @@ Base URL: `/api/v1`
 | DELETE | `/srs/cards/{card_id}` | Remove card |
 
 > Note: per decision `docs/decisions/srs-design.md` (Option A), SRS uses a single
-> `srs_cards` table + `srs_review_logs`, ratings 1–4 and state `graduated`;
-> there are no `decks` and no `/srs/decks` endpoint in v1. FSRS is deferred.
+> `srs_cards` table + `srs_review_logs`, ratings 1–4 and terminal state `graduated`.
+> Decks are a partial step with their own `/decks` router; deck-scoped due queues,
+> suspension, undo, daily new-card limits and Redis hot queues are deferred.
+> FSRS is deferred. See the L6 coverage tables in the decision memo.
 
 ### 4.7 Learning Path
 | Method | Route | Description |
 |--------|-------|-------------|
+| GET | `/path/assess` | Fixed 20-question placement bank (5 per question type) |
 | POST | `/path/assess` | Submit onboarding assessment answers → placement |
-| GET | `/path/plan` | Current personalized curriculum |
-| GET | `/path/lessons` | Lesson list with lock state |
-| GET | `/path/lessons/{id}` | Lesson content |
+| GET | `/path/plan` | Current personalized curriculum with deterministic next word/root items |
+| GET | `/path/lessons` | Lesson list with derived lock state (`?module=`, `?status=`) |
+| GET | `/path/lessons/{id}` | Lesson content (409 when locked, 404 outside the level band) |
+| POST | `/path/lessons/{id}/quiz` | Start a five-question lesson quiz; answers stay server-side |
+| POST | `/path/quiz/{attempt_id}/submit` | Grade a lesson quiz, award XP, return mistakes as SRS cards |
 | POST | `/path/lessons/{id}/complete` | Mark lesson complete, trigger unlock logic |
-| GET | `/path/progress` | Progress dashboard data |
+| GET | `/path/progress` | Counts + percent, module breakdown, XP/streak/last activity, next lesson, recent quizzes, learned word/root counts, chronological quiz scores, embedded SRS stats |
+
+Implemented rules (2026-11-23/24):
+
+- One lesson per root. Roots are ranked by total occurrences in `words`, tie-broken by
+  root string; roots with fewer than 3 occurrences are excluded. Bands are beginner
+  ranks 1–40, intermediate 41–120 and advanced 121–300. A user sees only their band.
+- `user_lessons.status` is `not_started | in_progress | completed`. `locked` and
+  `available` are derived from `lesson_prerequisites`; a lesson with all prerequisites
+  completed is available (or in progress).
+- Lesson quizzes contain five questions in the order `root`, `meaning`, `fill_blank`,
+  `pos`, `root`; pass mark is 4/5. Distractors and all Arabic text come from corpus rows.
+  `fill_blank` hides a token by stored position, never by editing verse text.
+- Quiz generation stores the public questions and answer key server-side; the client
+  receives no answer-bearing field and returns only chosen option ids. Submission grades
+  server-side, stores one `QuizAnswer` per question with its explanation, and returns
+  score, per-question results and created SRS card ids. A second submit returns 409;
+  another user's attempt returns 404; an out-of-range choice returns 422.
+- XP: +20 on first completion of a lesson, +2 per correct answer on a lesson's first
+  submitted quiz attempt. Replays award 0 XP but still create SRS cards from mistakes.
+- An active day (SRS review, quiz submit or lesson completion) updates
+  `users.last_activity_date` and the UTC streak. Quiz mistakes create cards through
+  `SRSService` in a per-lesson source deck named `Lesson: <title>`, deduped by
+  `(user_id, deck_id, word_id, item_type)`.
+- `/path/plan` returns `next_items`: individual corpus word/root items drawn from unlocked
+  lessons in the user's level band. Order is deterministic — lesson sequence, lesson id,
+  lesson-word sort order, then word id — and word ids already answered correctly in a
+  submitted lesson quiz or already present in the user's SRS cards are excluded.
+- `/path/progress` counts only the current level band. `recent_quizzes` is the 10 newest
+  submitted lesson attempts, ordered by completion time (then id) descending.
+  `quiz_scores_over_time` is every submitted lesson attempt in ascending completion order;
+  `words_learned` is the number of distinct word ids answered correctly, `roots_learned` is
+  the number of distinct non-placeholder roots on those words, and `srs` is the unmodified
+  `SRSService.get_stats()` result. The top-level `streak_days` is taken from `srs`, so the
+  day boundary matches SRS exactly. A user with no data receives empty lists/zero counts
+  without an error.
 
 ### 4.8 Response Envelope
 All responses wrap with `{ "ok": true, "data": ..., "error": null }`. Errors use standard HTTP codes with `{ "ok": false, "data": null, "error": { "code": "...", "message": "..." } }`.
@@ -281,15 +321,18 @@ All responses wrap with `{ "ok": true, "data": ..., "error": null }`. Errors use
 
 Full schema in **Backend Schema** document. Entities:
 
-- `users` — id, email, name, password_hash, level, created_at
+- `users` — id, email, name, password_hash, level, streak_days, xp, last_review_date, last_activity_date, created_at
 - `refresh_tokens` — id, user_id, token_hash, expires_at, revoked
 - `surahs` — id, number, name_ar, name_en, name_transliteration
 - `verses` — id, surah_id, ayah_number, text_uthmani, text_imlaei, translation_en, translation_ur
 - `words` — id, verse_id, position, token, diacritized, root, pattern, pos, morpheme_json
 - `nahw_annotations` — id, verse_id, word_id, token_index, role, dep_type, head_index, head_surah_number, head_ayah_number, irab, sentence_index (from EQTB)
-- `lessons` — id, title, level, module, sequence, content_json
+- `lessons` — id, title, level, module, sequence, root, content_json, est_minutes
 - `lesson_prerequisites` — lesson_id, requires_lesson_id
+- `lesson_words` — lesson_id, word_id, kind, sort_order
 - `user_lessons` — user_id, lesson_id, status, completed_at, score
+- `quiz_attempts` — user_id, lesson_id, kind, seed, questions_json, answer_key_json, status, score, total, completed_at
+- `quiz_answers` — attempt_id, question_index, option_id, is_correct
 - `srs_cards` — id, user_id, word_id, item_type, front, back, hint, surah_number, ayah_number, state, ease_factor, interval_days, repetitions, lapses, due_date, last_reviewed_at
 - `srs_review_logs` — id, card_id, user_id, rating, review_duration_ms, previous/new interval, previous/new ease_factor, reviewed_at
 - `chat_sessions` — id, user_id, title, created_at
@@ -306,30 +349,30 @@ Ratings are 1–4 and scheduling is server-authoritative
 ### 6.1 Parameters
 | Field | Initial | Update |
 |-------|---------|--------|
-| repetitions (n) | 0 | incremented on success in learning |
+| repetitions (n) | 0 | incremented on every submitted review, including a lapse |
 | ease_factor (EF) | 2.5 | clamp [1.30, 3.00] |
 | interval_days | 0 | per rules below |
-| state | `new` | `new` → `learning` → `review` → `graduated` |
+| state | `new` | `new` → `learning` → `review` → `graduated`; Again returns any state to `learning` |
 
 ### 6.2 Rating → Update Rules
 | Rating | Value | State `new`/`learning` | State `review` | EF |
 |--------|-------|------------------------|----------------|----|
 | Again | 1 | → `learning`, interval 1d | → `learning`, interval 1d | EF −= 0.20 (floor 1.30) |
-| Hard | 2 | interval = 1d (graduating), → `learning` | interval × 1.20, stays `review` | EF −= 0.15 |
-| Good | 3 | interval = 1d (graduating); second success → `review`, 2d | interval × EF, stays `review` | EF unchanged |
+| Hard | 2 | first success: 1d, `learning`; later: 2d, `review` | interval × 1.20, stays `review` | EF −= 0.15 |
+| Good | 3 | first success: 1d, `learning`; later: 2d, `review` | interval × EF, stays `review` | EF unchanged |
 | Easy | 4 | graduate immediately: 4d, → `review` | interval × EF × 1.30, stays `review` | EF += 0.10 (cap 3.00) |
 
-EF adjustment in learning follows the SM-2 form `EF += 0.1 − (5−q)(0.08 + (5−q)·0.02)` with floor 1.30. Constants: graduating interval 1 day, easy graduating interval 4 days, easy bonus 1.30, hard multiplier 1.20, EF floor 1.30.
+EF adjustment in learning follows the SM-2 form `EF += 0.1 − (5−q)(0.08 + (5−q)·0.02)` with floor 1.30. Constants: graduating interval 1 day, easy graduating interval 4 days, easy bonus 1.30, hard multiplier 1.20, EF floor 1.30. Any resulting `review` interval greater than 21 days promotes the card to terminal `graduated`, which is excluded from the due queue and `due_now`.
 
 ### 6.3 Algorithm Steps
-1. Fetch `srs_cards` where `due_date <= now`, ordered by `due_date` ASC (oldest-first).
-2. Present front → user recalls → reveal back (root, meaning, example).
+1. Fetch `srs_cards` where `state != 'graduated'` and `due_date <= now`, ordered by `due_date` ASC (oldest-first).
+2. Present front → user recalls → reveal back (caller-supplied text plus corpus-derived root, pattern, POS, transliteration and example ayah when `word_id` is set).
 3. User self-rates 1–4 (Again / Hard / Good / Easy).
 4. Update EF, interval, repetitions, due_date, state per §6.2.
 5. Append to `srs_review_logs` (with previous/new interval and EF, duration).
 6. Update streak counters in `users` and gamification data.
 
-> FSRS is explicitly deferred; see `docs/decisions/srs-design.md`.
+> FSRS, suspension, undo, daily caps, deck-scoped queues and retention evaluation are explicitly deferred; see the L6 coverage tables in `docs/decisions/srs-design.md`.
 
 ---
 
