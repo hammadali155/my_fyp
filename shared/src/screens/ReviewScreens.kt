@@ -115,6 +115,16 @@ fun FlashcardScreen(showBack: Boolean = false) {
                                 JText(b, t.titleS, c.onSurface)
                             }
                         }
+                        card.example_ayah_text?.let { ayah ->
+                            val reference = listOfNotNull(
+                                card.example_surah_number,
+                                card.example_ayah_number,
+                            ).joinToString(":")
+                            if (reference.isNotEmpty()) {
+                                JText(reference, t.labelS, c.onSurfaceSubtle)
+                            }
+                            JArabic(ayah, t.arabicLabel, c.onSurface)
+                        }
                     }
                 }
             }

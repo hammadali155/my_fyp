@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
@@ -7,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
+from app.models.quran import Surah, Verse, Word
 from app.models.srs import SRSCard, SRSReviewLog
 from app.models.user import User
 from app.schemas.srs import (
@@ -25,6 +28,71 @@ _EASY_BONUS: float = 1.30
 _HARD_INTERVAL_MULTIPLIER: float = 1.20
 _GRADUATING_INTERVAL: int = 1
 _EASY_GRADUATING_INTERVAL: int = 4
+_MASTERY_INTERVAL_DAYS: int = 21
+
+
+@dataclass(frozen=True)
+class _CorpusContext:
+    word_root: str | None = None
+    word_pattern: str | None = None
+    word_pos_tag: str | None = None
+    transliteration: str | None = None
+    example_surah_number: int | None = None
+    example_ayah_number: int | None = None
+    example_ayah_text: str | None = None
+    example_ayah_translation: str | None = None
+
+
+def _context_from_word(word: Word, verse: Verse, surah: Surah) -> _CorpusContext:
+    return _CorpusContext(
+        word_root=word.root,
+        word_pattern=word.pattern,
+        word_pos_tag=word.pos_tag,
+        transliteration=word.transliteration,
+        example_surah_number=surah.number,
+        example_ayah_number=verse.ayah_number,
+        example_ayah_text=verse.text_uthmani,
+        example_ayah_translation=verse.translation_en,
+    )
+
+
+def _context_from_verse(verse: Verse, surah: Surah) -> _CorpusContext:
+    return _CorpusContext(
+        example_surah_number=surah.number,
+        example_ayah_number=verse.ayah_number,
+        example_ayah_text=verse.text_uthmani,
+        example_ayah_translation=verse.translation_en,
+    )
+
+
+def _card_response(card: SRSCard, context: _CorpusContext | None = None) -> SRSCardResponse:
+    context = context or _CorpusContext()
+    return SRSCardResponse(
+        id=card.id,
+        item_type=card.item_type,
+        front=card.front,
+        back=card.back,
+        hint=card.hint,
+        word_id=card.word_id,
+        deck_id=card.deck_id,
+        surah_number=card.surah_number,
+        ayah_number=card.ayah_number,
+        state=card.state,
+        ease_factor=card.ease_factor,
+        interval_days=card.interval_days,
+        repetitions=card.repetitions,
+        lapses=card.lapses,
+        due_date=card.due_date,
+        last_reviewed_at=card.last_reviewed_at,
+        word_root=context.word_root,
+        word_pattern=context.word_pattern,
+        word_pos_tag=context.word_pos_tag,
+        transliteration=context.transliteration,
+        example_surah_number=context.example_surah_number,
+        example_ayah_number=context.example_ayah_number,
+        example_ayah_text=context.example_ayah_text,
+        example_ayah_translation=context.example_ayah_translation,
+    )
 
 
 def _sm2_schedule(
@@ -70,6 +138,9 @@ def _sm2_schedule(
             new_ef = min(3.0, ef + 0.10)
             new_state = "review"
 
+    if new_state == "review" and new_interval > _MASTERY_INTERVAL_DAYS:
+        new_state = "graduated"
+
     new_due = now + timedelta(days=new_interval)
     return new_state, new_interval, round(new_ef, 4), new_due
 
@@ -78,8 +149,88 @@ class SRSService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
+    async def _load_word_context(self, word_id: int) -> _CorpusContext | None:
+        row = (
+            await self.db.execute(
+                select(Word, Verse, Surah)
+                .join(Verse, Word.verse_id == Verse.id)
+                .join(Surah, Verse.surah_id == Surah.id)
+                .where(Word.id == word_id)
+            )
+        ).first()
+        if row is None:
+            return None
+        word, verse, surah = row
+        return _context_from_word(word, verse, surah)
+
+    async def _load_contexts(self, cards: Sequence[SRSCard]) -> dict[int, _CorpusContext]:
+        contexts: dict[int, _CorpusContext] = {}
+
+        word_ids = {card.word_id for card in cards if card.word_id is not None}
+        if word_ids:
+            word_rows = (
+                await self.db.execute(
+                    select(Word, Verse, Surah)
+                    .join(Verse, Word.verse_id == Verse.id)
+                    .join(Surah, Verse.surah_id == Surah.id)
+                    .where(Word.id.in_(word_ids))
+                )
+            ).all()
+            contexts_by_word = {
+                word.id: _context_from_word(word, verse, surah)
+                for word, verse, surah in word_rows
+            }
+            for card in cards:
+                if card.word_id is not None and card.word_id in contexts_by_word:
+                    contexts[card.id] = contexts_by_word[card.word_id]
+
+        refs = {
+            (card.surah_number, card.ayah_number)
+            for card in cards
+            if card.word_id is None
+            and card.surah_number is not None
+            and card.ayah_number is not None
+        }
+        if refs:
+            surah_numbers = {ref[0] for ref in refs}
+            ayah_numbers = {ref[1] for ref in refs}
+            verse_rows = (
+                await self.db.execute(
+                    select(Verse, Surah)
+                    .join(Surah, Verse.surah_id == Surah.id)
+                    .where(
+                        Surah.number.in_(surah_numbers),
+                        Verse.ayah_number.in_(ayah_numbers),
+                    )
+                )
+            ).all()
+            contexts_by_ref = {
+                (surah.number, verse.ayah_number): _context_from_verse(verse, surah)
+                for verse, surah in verse_rows
+            }
+            for card in cards:
+                ref = (card.surah_number, card.ayah_number)
+                if card.word_id is None and ref in contexts_by_ref:
+                    contexts[card.id] = contexts_by_ref[ref]
+
+        return contexts
+
     async def create_card(self, user_id: int, req: SRSCardCreate) -> SRSCardResponse:
         logger.info("Creating SRS card for user_id=%d type=%s", user_id, req.item_type)
+        context: _CorpusContext | None = None
+        if req.word_id is not None:
+            context = await self._load_word_context(req.word_id)
+            if context is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Word not found")
+
+        surah_number = req.surah_number
+        ayah_number = req.ayah_number
+        if context is not None:
+            if surah_number is None:
+                surah_number = context.example_surah_number
+            if ayah_number is None:
+                ayah_number = context.example_ayah_number
+
         card = SRSCard(
             user_id=user_id,
             item_type=req.item_type,
@@ -87,14 +238,15 @@ class SRSService:
             back=req.back,
             hint=req.hint,
             word_id=req.word_id,
-            surah_number=req.surah_number,
-            ayah_number=req.ayah_number,
+            deck_id=req.deck_id,
+            surah_number=surah_number,
+            ayah_number=ayah_number,
         )
         self.db.add(card)
         await self.db.commit()
         await self.db.refresh(card)
         logger.info("Created card id=%d for user_id=%d", card.id, user_id)
-        return SRSCardResponse.model_validate(card)
+        return _card_response(card, context)
 
     async def get_due_queue(
         self,
@@ -108,28 +260,30 @@ class SRSService:
             select(SRSCard)
             .where(
                 SRSCard.user_id == user_id,
+                SRSCard.state != "graduated",
                 SRSCard.due_date <= now,
             )
             .order_by(SRSCard.due_date.asc())
             .limit(limit)
         )
-        cards = list(result.scalars().all())
+        card_rows = list(result.scalars().all())
+        contexts = await self._load_contexts(card_rows)
 
-        new_count = sum(1 for c in cards if c.state == "new")
-        learning_count = sum(1 for c in cards if c.state == "learning")
-        review_count = sum(1 for c in cards if c.state == "review")
+        new_count = sum(1 for c in card_rows if c.state == "new")
+        learning_count = sum(1 for c in card_rows if c.state == "learning")
+        review_count = sum(1 for c in card_rows if c.state == "review")
 
         logger.debug(
             "Due queue for user_id=%d: total=%d new=%d learning=%d review=%d",
             user_id,
-            len(cards),
+            len(card_rows),
             new_count,
             learning_count,
             review_count,
         )
         return SRSDueQueueResponse(
-            cards=[SRSCardResponse.model_validate(c) for c in cards],
-            total=len(cards),
+            cards=[_card_response(c, contexts.get(c.id)) for c in card_rows],
+            total=len(card_rows),
             new_count=new_count,
             learning_count=learning_count,
             review_count=review_count,
@@ -216,6 +370,7 @@ class SRSService:
         due_result = await self.db.execute(
             select(func.count(SRSCard.id)).where(
                 SRSCard.user_id == user_id,
+                SRSCard.state != "graduated",
                 SRSCard.due_date <= now,
             )
         )
