@@ -22,6 +22,7 @@ class User(TimestampMixin, Base):
     learning_goal: Mapped[str | None] = mapped_column(String(50), nullable=True)
     streak_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_review_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    last_activity_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     xp: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     onb_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

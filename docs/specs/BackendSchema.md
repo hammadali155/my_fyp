@@ -31,6 +31,8 @@ users 1───n srs_review_logs  n───1 srs_cards
 users 1───n chat_sessions  n───1 chat_messages
 users 1───n user_lessons  n───1 lessons
 lessons n───n lessons (prerequisites via lesson_prerequisites)
+lessons 1───n lesson_words  n───1 words
+users 1───n quiz_attempts  n───1 quiz_answers
 users 1───n assessment_attempts
 surahs 1───n verses 1───n words
 words 1───n nahw_annotations (1:1 per word in corpus, but kept separate for flexibility)
@@ -56,6 +58,7 @@ CREATE TABLE users (
     learning_goal    TEXT,                  -- understand_quran | grammar | vocabulary
     streak_days      INTEGER NOT NULL DEFAULT 0,
     last_review_date DATE,
+    last_activity_date DATE,               -- L1: UTC active day for path/quiz/SRS
     xp               INTEGER NOT NULL DEFAULT 0,
     is_active        BOOLEAN NOT NULL DEFAULT true,
     onb_complete     BOOLEAN NOT NULL DEFAULT false,
@@ -157,11 +160,13 @@ CREATE TABLE lessons (
     title        TEXT NOT NULL,
     module       TEXT NOT NULL CHECK (module IN ('sarf','nahw','vocabulary')),
     level        TEXT NOT NULL CHECK (level IN ('beginner','intermediate','advanced')),
-    sequence     INTEGER NOT NULL,            -- ordering within level+module
+    sequence     INTEGER NOT NULL,            -- L1: root rank within the level band
+    root         TEXT,                        -- L1: one lesson per Quranic root
     content_json JSONB NOT NULL,              -- sections: theory, examples, exercises, quiz
     est_minutes  INTEGER NOT NULL DEFAULT 15,
     UNIQUE (module, level, sequence)
 );
+CREATE INDEX idx_lessons_level_sequence ON lessons(level, sequence);
 
 CREATE TABLE lesson_prerequisites (
     lesson_id           BIGINT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
@@ -174,6 +179,16 @@ CREATE TABLE lesson_concept_tags (
     concept_id INTEGER NOT NULL REFERENCES concept_tags(id) ON DELETE CASCADE,
     PRIMARY KEY (lesson_id, concept_id)
 );
+
+CREATE TABLE lesson_words (
+    id          BIGSERIAL PRIMARY KEY,
+    lesson_id   BIGINT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    word_id     BIGINT NOT NULL REFERENCES words(id) ON DELETE CASCADE,
+    kind        TEXT NOT NULL DEFAULT 'form',
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (lesson_id, word_id, kind)
+);
+CREATE INDEX idx_lesson_words_lesson ON lesson_words(lesson_id);
 
 CREATE TABLE user_lessons (
     id           BIGSERIAL PRIMARY KEY,
@@ -196,6 +211,37 @@ CREATE TABLE assessment_attempts (
 );
 CREATE INDEX idx_assess_user ON assessment_attempts(user_id);
 
+CREATE TABLE quiz_attempts (
+    id               BIGSERIAL PRIMARY KEY,
+    user_id          BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lesson_id        BIGINT REFERENCES lessons(id) ON DELETE CASCADE,
+    kind             TEXT NOT NULL DEFAULT 'lesson' CHECK (kind IN ('lesson','assessment')),
+    seed             INTEGER NOT NULL,
+    questions_json   JSONB NOT NULL,
+    answer_key_json  JSONB NOT NULL,
+    status           TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','submitted')),
+    score            INTEGER,
+    total            INTEGER NOT NULL,
+    completed_at     TIMESTAMPTZ,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_quiz_attempts_user ON quiz_attempts(user_id);
+CREATE INDEX idx_quiz_attempts_lesson ON quiz_attempts(lesson_id);
+
+CREATE TABLE quiz_answers (
+    id              BIGSERIAL PRIMARY KEY,
+    attempt_id      BIGINT NOT NULL REFERENCES quiz_attempts(id) ON DELETE CASCADE,
+    question_index  INTEGER NOT NULL,
+    option_id       TEXT NOT NULL,
+    is_correct      BOOLEAN NOT NULL,
+    explanation     TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (attempt_id, question_index)
+);
+CREATE INDEX idx_quiz_answers_attempt ON quiz_answers(attempt_id);
+
 CREATE TABLE user_weak_areas (
     id         BIGSERIAL PRIMARY KEY,
     user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -206,11 +252,25 @@ CREATE TABLE user_weak_areas (
 );
 ```
 
+> L1–L4 implementation (2026-11-23/24): `lessons.root`, `lesson_words`,
+> `quiz_attempts`, `quiz_answers.explanation` and `users.last_activity_date` are
+> live via migrations `4521c5f0faf9`, `1e87e444a611`, `773c5ce44f99`,
+> `1107abd0700a` and `b7224c79c2f2`. `concept_tags`, `lesson_concept_tags` and
+> `user_weak_areas` above remain target-schema items, not created by the L1–L4
+> migrations. Quiz generation keeps questions and the answer key server-side; submit
+> stores one explanation-bearing answer per question. Wrong quiz answers create cards
+> through `SRSService` in a source deck named `Lesson: <title>`; the partial unique
+> index `uq_srs_cards_user_deck_word_type` dedupes rows with non-null `word_id` and
+> `deck_id`.
+
 ### 3.4 SRS / Spaced Repetition
 
 > Per `docs/decisions/srs-design.md` (Option A): a single `srs_cards` table plus
-> `srs_review_logs`; ratings 1–4; state progression `new → learning → review → graduated`.
-> No `decks`/`cards`/`card_reviews` tables in v1. FSRS deferred.
+> `srs_review_logs`; ratings 1–4; state progression `new → learning → review → graduated`
+> with `graduated` terminal and excluded from the due queue. A partial `decks` table
+> groups cards via `srs_cards.deck_id`; the full `cards`/`card_reviews` schema,
+> deck-scoped queues and FSRS remain deferred. Migration `af458d94019b` adds the
+> named `ck_srs_cards_state` and `ck_srs_review_logs_rating` CHECK constraints.
 
 ```sql
 CREATE TABLE srs_cards (
@@ -218,6 +278,7 @@ CREATE TABLE srs_cards (
     user_id       BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     word_id       BIGINT REFERENCES words(id) ON DELETE SET NULL,
     item_type     TEXT NOT NULL DEFAULT 'root',   -- root | vocabulary | verse_fill_blank | grammar_rule
+    deck_id       BIGINT REFERENCES decks(id) ON DELETE CASCADE,
     front         TEXT NOT NULL,
     back          TEXT NOT NULL,
     hint          TEXT,
@@ -235,6 +296,10 @@ CREATE TABLE srs_cards (
 );
 CREATE INDEX idx_srs_cards_user_due ON srs_cards(user_id, due_date);
 CREATE INDEX idx_srs_cards_user_state ON srs_cards(user_id, state);
+CREATE INDEX idx_srs_cards_deck_id ON srs_cards(deck_id);
+CREATE UNIQUE INDEX uq_srs_cards_user_deck_word_type
+    ON srs_cards(user_id, deck_id, word_id, item_type)
+    WHERE word_id IS NOT NULL AND deck_id IS NOT NULL;
 
 CREATE TABLE srs_review_logs (
     id           BIGSERIAL PRIMARY KEY,
@@ -416,7 +481,9 @@ def sm2_update(card, rating: int):
 ```
 
 Status rule: `new` → `learning` at first review → `review` on successful graduation
-→ `graduated` (terminal mastered state, equivalent of the old `mastered`).
+→ `graduated` (terminal mastered state, equivalent of the old `mastered`) when a
+resulting `review` interval exceeds 21 days. `graduated` cards are excluded from
+the due queue and from `due_now`.
 
 > FSRS is deferred; see `docs/decisions/srs-design.md`.
 

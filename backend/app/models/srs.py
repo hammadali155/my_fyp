@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -12,8 +22,22 @@ from app.models.deck import Deck
 class SRSCard(TimestampMixin, Base):
     __tablename__ = "srs_cards"
     __table_args__ = (
+        CheckConstraint(
+            "state IN ('new', 'learning', 'review', 'graduated')",
+            name="ck_srs_cards_state",
+        ),
         Index("ix_srs_cards_user_due", "user_id", "due_date"),
         Index("ix_srs_cards_user_state", "user_id", "state"),
+        Index(
+            "uq_srs_cards_user_deck_word_type",
+            "user_id",
+            "deck_id",
+            "word_id",
+            "item_type",
+            unique=True,
+            sqlite_where=text("word_id IS NOT NULL AND deck_id IS NOT NULL"),
+            postgresql_where=text("word_id IS NOT NULL AND deck_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -66,7 +90,10 @@ class SRSCard(TimestampMixin, Base):
 
 class SRSReviewLog(TimestampMixin, Base):
     __tablename__ = "srs_review_logs"
-    __table_args__ = (Index("ix_srs_logs_user_reviewed", "user_id", "reviewed_at"),)
+    __table_args__ = (
+        CheckConstraint("rating BETWEEN 1 AND 4", name="ck_srs_review_logs_rating"),
+        Index("ix_srs_logs_user_reviewed", "user_id", "reviewed_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     card_id: Mapped[int] = mapped_column(

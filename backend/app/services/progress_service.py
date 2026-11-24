@@ -49,10 +49,20 @@ class ProgressService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    @staticmethod
+    def _apply_activity_to_user(user: User, on: date) -> None:
+        anchor = user.last_activity_date or user.last_review_date
+        user.streak_days = compute_streak_update(anchor, user.streak_days, on)
+        user.last_activity_date = on
+
+    async def apply_activity(self, user_id: int, on: date) -> None:
+        user = (await self.db.execute(select(User).where(User.id == user_id))).scalar_one()
+        self._apply_activity_to_user(user, on)
+
     async def apply_review_progress(self, user_id: int, rating: int, reviewed_on: date) -> None:
         user = (await self.db.execute(select(User).where(User.id == user_id))).scalar_one()
         user.xp += xp_for_rating(rating)
-        user.streak_days = compute_streak_update(user.last_review_date, user.streak_days, reviewed_on)
+        self._apply_activity_to_user(user, reviewed_on)
         user.last_review_date = reviewed_on
         await self.check_and_award_badges(user_id)
 

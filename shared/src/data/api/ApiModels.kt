@@ -109,6 +109,10 @@ data class SrsCardDto(
     val word_pattern: String? = null,
     val word_pos_tag: String? = null,
     val transliteration: String? = null,
+    val example_surah_number: Int? = null,
+    val example_ayah_number: Int? = null,
+    val example_ayah_text: String? = null,
+    val example_ayah_translation: String? = null,
 )
 
 @Serializable
