@@ -23,6 +23,21 @@ Run the project's tests with `./kotlin test`, or `./kotlin test -m <module>` for
 
 The backend's sarf (root-extraction) evaluation methodology, measured numbers and raw run outputs are documented in [docs/evaluation/sarf-baseline.md](./docs/evaluation/sarf-baseline.md).
 
+### Demo data
+
+With the backend dependencies installed and the Quran corpus ingested, create or refresh the demo learner from `backend/`:
+
+```bash
+uv run python ../scripts/seed_demo.py
+```
+
+The script prints the login:
+
+- Email: `demo@jawhar.app`
+- Password: `JawharDemo123!`
+
+It creates a beginner learning path with completed lessons and quizzes, two decks of real Quranic words, SRS cards and two weeks of review history. It refuses to run against a database URL that looks like production and only replaces the demo account's own data on reruns.
+
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html), [Kotlin Toolchain](https://kotlin-toolchain.org/dev/), [Compose Multiplatform](https://kotlinlang.org/compose-multiplatform/), [Kotlin/Wasm](https://kotl.in/wasm/).

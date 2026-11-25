@@ -6,8 +6,10 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.deck import Deck
 from app.models.srs import SRSCard
-from app.services.srs_service import _sm2_schedule
+from app.schemas.srs import SRSCardCreate
+from app.services.srs_service import SRSService, _sm2_schedule
 
 # ---------------------------------------------------------------------------
 # Unit tests: SM-2 scheduling algorithm
@@ -55,7 +57,7 @@ def test_sm2_new_card_easy_graduates_immediately():
 def test_sm2_review_good_multiplies_interval():
     card = _make_card(state="review", ef=2.5, interval=10, reps=3)
     new_state, new_interval, new_ef, _ = _sm2_schedule(card, rating=3, now=datetime.now(UTC))
-    assert new_state == "review"
+    assert new_state == "graduated"
     assert new_interval == 25  # 10 * 2.5
     assert new_ef == pytest.approx(2.5, abs=0.01)
 
@@ -71,7 +73,7 @@ def test_sm2_review_hard_applies_multiplier():
 def test_sm2_review_easy_boosts_ef():
     card = _make_card(state="review", ef=2.5, interval=10, reps=3)
     new_state, new_interval, new_ef, _ = _sm2_schedule(card, rating=4, now=datetime.now(UTC))
-    assert new_state == "review"
+    assert new_state == "graduated"
     assert new_ef > 2.5
     assert new_interval > 10
 
@@ -252,3 +254,19 @@ async def test_delete_card(
 async def test_delete_card_not_found(client: AsyncClient, auth_headers: dict):
     resp = await client.delete("/api/v1/srs/cards/99999", headers=auth_headers)
     assert resp.status_code == 404
+
+
+async def test_create_card_stores_deck_id(
+    db_session: AsyncSession, registered_user: dict
+) -> None:
+    user_id = int(registered_user["user"]["id"])
+    deck = Deck(user_id=user_id, name="Lesson: Test", is_default=False)
+    db_session.add(deck)
+    await db_session.flush()
+
+    card = await SRSService(db_session).create_card(
+        user_id,
+        SRSCardCreate(front="كتب", back="to write", deck_id=deck.id),
+    )
+
+    assert card.deck_id == deck.id

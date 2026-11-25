@@ -220,15 +220,18 @@
 
 ```
 [Dashboard ─ Vocabulary]
-   ├─▶ My decks (new/learning/review/mastered counts)
-   ├─▶ Create custom deck
-   ├─▶ Add word (from Sarf result / Nahw verse / tutor)
-   ├─▶ Edit card (meaning overrides, example)
-   ├─▶ Delete / archive deck
+   ├─▶ My decks (new/learning/review/graduated counts — listing is live)
+   ├─▶ Create custom deck (live)
+   ├─▶ Add word (from Sarf result / Nahw verse / tutor — endpoints live)
+   ├─▶ Edit card (meaning overrides, example — deferred)
+   ├─▶ Delete deck (live) / archive deck (deferred)
    └─▶ [Start session] ──▶ SRS Review Flow
 ```
 
-**Card states:** New → Learning (repetitions 0-2) → Review (interval), → Mastered (interval > 21d), with `status` transitions handled by SM-2 rules.
+**Card states:** New → Learning (first success) → Review (interval) → Graduated
+(terminal, interval > 21d, excluded from the due queue), with `state` transitions
+handled by SM-2 rules. See `docs/decisions/srs-design.md` for the full L6 coverage
+and deferral matrix.
 
 ---
 

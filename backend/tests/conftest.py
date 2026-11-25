@@ -189,3 +189,139 @@ async def seed_quran_data(db_session: AsyncSession):
     )
     db_session.add_all([w1, w2, w3, w4, w5])
     await db_session.commit()
+
+
+@pytest.fixture
+async def seed_quiz_data(db_session: AsyncSession, seed_quran_data: None) -> None:
+    """Seed extra hand-made words for quiz distractor tests, not Quranic text."""
+    db_session.add_all(
+        [
+            Word(
+                verse_id=1,
+                position=10,
+                text_uthmani="كِتَابٌ",
+                translation_en="a written book",
+                root="كتب",
+                lemma="كِتَاب",
+                pos_tag="N",
+            ),
+            Word(
+                verse_id=1,
+                position=11,
+                text_uthmani="قَلَمٌ",
+                translation_en="a writing pen",
+                root="قلم",
+                lemma="قَلَم",
+                pos_tag="N",
+            ),
+            Word(
+                verse_id=1,
+                position=12,
+                text_uthmani="بَابٌ",
+                translation_en="an open door",
+                root="بوب",
+                lemma="بَاب",
+                pos_tag="N",
+            ),
+            Word(
+                verse_id=1,
+                position=13,
+                text_uthmani="نُورٌ",
+                translation_en="a guiding light",
+                root="نور",
+                lemma="نُور",
+                pos_tag="N",
+            ),
+            Word(
+                verse_id=1,
+                position=14,
+                text_uthmani="ٱلْكِتَابُ",
+                translation_en="the written book",
+                root="كتب",
+                lemma="كِتَاب",
+                pos_tag="N",
+            ),
+            Word(
+                verse_id=1,
+                position=15,
+                text_uthmani="شَيْطَانٌ",
+                translation_en="the Satan",
+                root="شطن",
+                lemma="شَيْطَان",
+                pos_tag="PN",
+            ),
+            Word(
+                verse_id=1,
+                position=16,
+                text_uthmani="قُرْآنٌ",
+                translation_en="the Quran",
+                root="قرا",
+                lemma="قُرْآن",
+                pos_tag="PN",
+            ),
+            Word(
+                verse_id=2,
+                position=10,
+                text_uthmani="جِنٌّ",
+                translation_en="the jinn",
+                root="جنن",
+                lemma="جِنّ",
+                pos_tag="PN",
+            ),
+            Word(
+                verse_id=2,
+                position=11,
+                text_uthmani="عَادٌ",
+                translation_en="the accursed",
+                root="عود",
+                lemma="عَاد",
+                pos_tag="PN",
+            ),
+            Word(
+                verse_id=2,
+                position=12,
+                text_uthmani="ٱلْعَظِيمُ",
+                translation_en="the Magnificent",
+                root="عظم",
+                lemma="عَظِيم",
+                pos_tag="ADJ",
+            ),
+            Word(
+                verse_id=2,
+                position=13,
+                text_uthmani="ٱلْكَرِيمُ",
+                translation_en="the Generous",
+                root="كرم",
+                lemma="كَرِيم",
+                pos_tag="ADJ",
+            ),
+            Word(
+                verse_id=2,
+                position=14,
+                text_uthmani="ٱلْحَكِيمُ",
+                translation_en="the All-Wise",
+                root="حكم",
+                lemma="حَكِيم",
+                pos_tag="ADJ",
+            ),
+            Word(
+                verse_id=2,
+                position=15,
+                text_uthmani="ٱلْقَدِيرُ",
+                translation_en="the All-Powerful",
+                root="قدر",
+                lemma="قَدِير",
+                pos_tag="ADJ",
+            ),
+            Word(
+                verse_id=2,
+                position=16,
+                text_uthmani="ٱلْعَلِيمُ",
+                translation_en="the All-Knowing",
+                root="علم",
+                lemma="عَلِيم",
+                pos_tag="ADJ",
+            ),
+        ]
+    )
+    await db_session.commit()

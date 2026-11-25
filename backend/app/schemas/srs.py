@@ -13,6 +13,7 @@ class SRSCardCreate(BaseModel):
     back: str = Field(..., min_length=1)
     hint: str | None = None
     word_id: int | None = None
+    deck_id: int | None = None
     surah_number: int | None = Field(default=None, ge=1, le=114)
     ayah_number: int | None = Field(default=None, ge=1)
 
@@ -30,6 +31,7 @@ class SRSCardResponse(BaseModel):
     back: str
     hint: str | None
     word_id: int | None
+    deck_id: int | None
     surah_number: int | None
     ayah_number: int | None
     state: str
@@ -39,6 +41,14 @@ class SRSCardResponse(BaseModel):
     lapses: int
     due_date: datetime
     last_reviewed_at: datetime | None
+    word_root: str | None = None
+    word_pattern: str | None = None
+    word_pos_tag: str | None = None
+    transliteration: str | None = None
+    example_surah_number: int | None = None
+    example_ayah_number: int | None = None
+    example_ayah_text: str | None = None
+    example_ayah_translation: str | None = None
 
     model_config = {"from_attributes": True}
 
